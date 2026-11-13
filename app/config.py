@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     image_aspect_ratio: str = "1:1"
     ai_timeout_seconds: float = 90  # Gateway 권장 60초 이상
     generate_concurrency: int = 3  # 페이지 재구성 동시 호출 수
+    live_caption_interval_seconds: float = 15  # 같은 페이지 실시간 자막 LLM 호출 최소 간격
 
     @property
     def cors_origins(self) -> list[str]:

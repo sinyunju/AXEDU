@@ -62,3 +62,22 @@ RESTRUCTURE_SCHEMA = strict_json_schema(
         "additionalProperties": False,
     },
 )
+
+
+class LiveCaptionOut(_Strict):
+    easy_transcript: list[str] = Field(default_factory=list)
+    hard_words: list[HardWordOut] = Field(default_factory=list)
+
+
+LIVE_CAPTION_SCHEMA = strict_json_schema(
+    "live_caption",
+    {
+        "type": "object",
+        "properties": {
+            "easy_transcript": {"type": "array", "items": {"type": "string"}},
+            "hard_words": _HARD_WORDS,
+        },
+        "required": ["easy_transcript", "hard_words"],
+        "additionalProperties": False,
+    },
+)
