@@ -30,7 +30,7 @@ def test_signup_and_login_and_me(client):
     assert r.status_code == 200
     data = r.json()
     assert data["token_type"] == "bearer"
-    assert data["user"] == {"id": body["id"], "name": "이름", "role": "teacher"}
+    assert data["user"] == {"id": body["id"], "login_id": "tch1", "name": "이름", "role": "teacher"}
 
     r = client.get("/auth/me", headers=bearer(data["access_token"]))
     assert r.status_code == 200 and r.json()["login_id"] == "tch1"
