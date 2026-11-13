@@ -148,3 +148,20 @@ class ImageRequest(BaseModel):
         None, max_length=1000, description="비우면 AI가 제안한 image_suggestion.prompt를 사용",
         examples=["잎에 햇빛이 비치고 뿌리로 물이 올라가는 모습"],
     )
+
+
+# ---------- 6단계: 학생 페이지 조회 ----------
+class PageView(BaseModel):
+    """학생 화면의 한 페이지. 학생은 자유롭게 페이지를 이동하고, teacher_page로 선생님 위치만 안다."""
+
+    lesson_id: int
+    page_no: int
+    page_count: int
+    lesson_status: LessonStatus
+    teacher_page: int = Field(description="선생님이 지금 보고 있는 페이지 (Lesson.current_page)")
+    image_url: str
+    easy_sentences: list[str]
+    hard_words: list[HardWord]
+    generated_image_url: str | None
+    easy_transcript: list[str] = Field(description="이 페이지에서 지금까지 나온 선생님 말씀의 쉬운 자막")
+    transcript_updated_at: datetime | None

@@ -11,10 +11,10 @@ from app.ai.base import image_extension
 from app.config import get_settings
 from app.db import get_session
 from app.deps import get_current_user, require_teacher
-from app.models import Lesson, LessonStatus, Page, Role, User
+from app.models import Lesson, LessonStatus, Page, PageLive, Role, User
 from app.pdf import PdfError, remove_files, render_pdf
 from app.permissions import get_accessible_lesson, get_owned_course, get_owned_lesson
-from app.schemas import ImageRequest, LessonDetail, LessonOut, PageOut, PageUpdate
+from app.schemas import ImageRequest, LessonDetail, LessonOut, PageOut, PageUpdate, PageView
 from app.services.generation import run_generation
 from app.storage import GENERATED_SUBDIR, delete_file, save_file
 
@@ -279,3 +279,81 @@ def approve_lesson(
     session.commit()
     session.refresh(lesson)
     return lesson_detail(session, lesson, teacher)
+
+
+# ---------- 6단계: 수업 시작/종료, 학생 페이지 조회 ----------
+@router.post(
+    "/lessons/{lesson_id}/start",
+    response_model=LessonOut,
+    summary="실시간 수업 시작 (교사)",
+    description="approved → live (선생님 페이지는 1쪽부터). ended → live는 수업 재개로 보고 페이지를 유지한다. "
+                "이미 live면 그대로 반환.",
+    responses={409: {"description": "승인 전 회차"}},
+)
+def start_lesson(
+    lesson_id: int, session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+) -> LessonOut:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    if lesson.status == LessonStatus.live:
+        return lesson_out(session, lesson)
+    if lesson.status not in (LessonStatus.approved, LessonStatus.ended):
+        raise HTTPException(status.HTTP_409_CONFLICT, "승인한 회차만 수업을 시작할 수 있습니다")
+    if lesson.status == LessonStatus.approved:
+        lesson.current_page = 1
+    lesson.status = LessonStatus.live
+    session.add(lesson)
+    session.commit()
+    session.refresh(lesson)
+    return lesson_out(session, lesson)
+
+
+@router.post(
+    "/lessons/{lesson_id}/end",
+    response_model=LessonOut,
+    summary="수업 종료 (교사)",
+    description="live → ended. 이미 ended면 그대로 반환. (7단계에서 학생들에게 lesson_ended 알림 추가)",
+    responses={409: {"description": "진행 중인 수업이 아님"}},
+)
+def end_lesson(
+    lesson_id: int, session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+) -> LessonOut:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    if lesson.status == LessonStatus.ended:
+        return lesson_out(session, lesson)
+    if lesson.status != LessonStatus.live:
+        raise HTTPException(status.HTTP_409_CONFLICT, "진행 중인 수업이 아닙니다")
+    lesson.status = LessonStatus.ended
+    session.add(lesson)
+    session.commit()
+    session.refresh(lesson)
+    return lesson_out(session, lesson)
+
+
+@router.get(
+    "/lessons/{lesson_id}/pages/{page_no}",
+    response_model=PageView,
+    summary="페이지 보기 (학생 화면용, 교사도 사용 가능)",
+    description="원본 이미지, 쉬운 문장, 어려운 낱말, 생성 이미지, 지금까지의 쉬운 자막, 선생님의 현재 페이지. "
+                "학생은 승인된 회차만 조회 가능.",
+)
+def get_page_view(
+    lesson_id: int, page_no: int, session: Session = Depends(get_session), user: User = Depends(get_current_user),
+) -> PageView:
+    lesson = get_accessible_lesson(session, lesson_id, user)
+    page = _get_page(session, lesson, page_no)
+    out = page_out(page, user)  # 학생에게는 승인된 페이지 내용만
+    live = session.get(PageLive, (lesson.id, page_no))
+    page_count = session.exec(select(func.count()).select_from(Page).where(Page.lesson_id == lesson.id)).one()
+    return PageView(
+        lesson_id=lesson.id,
+        page_no=page_no,
+        page_count=page_count,
+        lesson_status=lesson.status,
+        teacher_page=lesson.current_page,
+        image_url=out.image_url,
+        easy_sentences=out.easy_sentences,
+        hard_words=out.hard_words,
+        generated_image_url=out.generated_image_url,
+        easy_transcript=live.easy_transcript if live else [],
+        transcript_updated_at=live.updated_at if live else None,
+    )
