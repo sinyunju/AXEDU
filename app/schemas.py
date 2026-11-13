@@ -85,3 +85,43 @@ class JoinRequest(BaseModel):
 class JoinResponse(BaseModel):
     course: CourseOut
     joined_at: datetime
+
+
+# ---------- 회차 / 페이지 ----------
+class HardWord(BaseModel):
+    word: str
+    meaning: str
+
+
+class ImageSuggestion(BaseModel):
+    needed: bool
+    reason: str = ""
+    prompt: str = ""
+
+
+class PageOut(BaseModel):
+    page_no: int
+    image_url: str = Field(description="원본 페이지 PNG (/files/...)")
+    easy_sentences: list[str] = Field(description="학생에게는 승인된 페이지만 채워짐")
+    hard_words: list[HardWord]
+    generated_image_url: str | None
+    approved: bool
+    source_text: str | None = Field(None, description="교사에게만 제공")
+    image_suggestion: ImageSuggestion | None = Field(None, description="교사에게만 제공")
+
+
+class LessonOut(BaseModel):
+    id: int
+    course_id: int
+    session_no: int
+    title: str
+    class_date: date | None
+    status: LessonStatus
+    progress: int = Field(description="페이지 재구성 진행률 0~100")
+    current_page: int
+    page_count: int
+    created_at: datetime
+
+
+class LessonDetail(LessonOut):
+    pages: list[PageOut]
