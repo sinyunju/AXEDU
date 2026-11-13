@@ -4,7 +4,12 @@ import os
 os.environ["MOCK_AI"] = "true"
 os.environ["JWT_SECRET"] = "test-secret-at-least-32-bytes-long-xxxxxxxx"
 
+import bcrypt
 import pytest
+
+# 테스트 속도용: bcrypt cost를 최소(4)로. 운영 코드(app/security.py)는 기본값(12) 그대로.
+_orig_gensalt = bcrypt.gensalt
+bcrypt.gensalt = lambda rounds=4, prefix=b"2b": _orig_gensalt(4, prefix)
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel
 
