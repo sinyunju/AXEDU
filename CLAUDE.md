@@ -105,10 +105,11 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 - `{"type":"page_change","page_no":5}`
 - `{"type":"transcript","page_no":5,"text":"...","final":true}`  (Web Speech API의 확정 결과만 전송)
 
-서버 → 학생 (broadcast)
+서버 → 교사·학생 모두 (broadcast, 교사 화면에서도 학생이 받는 자막을 확인할 수 있도록)
 - `{"type":"teacher_page","page_no":5}`
 - `{"type":"page_update","page_no":5,"easy_transcript":[{"text":"...","type":"content"},{"text":"...","type":"flow"}],"hard_words":[...]}`  (easy_transcript는 그 페이지 자막 전체)
-- `{"type":"lesson_ended"}`
+- `{"type":"lesson_started","page_no":1}`  (`POST /lessons/{id}/start` 시. 승인된 회차에 미리 접속해 있던 학생에게 수업 시작을 알림)
+- `{"type":"lesson_ended"}`  (`POST /lessons/{id}/end` 시)
 
 서버 → 교사
 - `{"type":"ack", ...}`, 오류 시 `{"type":"error","detail":"..."}`
