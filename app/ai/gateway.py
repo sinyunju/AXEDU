@@ -14,9 +14,12 @@ from openai import APIError, AsyncOpenAI, BadRequestError
 from pydantic import BaseModel, ValidationError
 
 from app.ai.base import AIError, AIProvider, ImageProvider, image_extension
-from app.ai.prompts import IMAGE_STYLE_SUFFIX, live_caption_messages, quiz_messages, restructure_messages
+from app.ai.prompts import (
+    IMAGE_STYLE_SUFFIX, chat_messages, live_caption_messages, quiz_messages, restructure_messages,
+)
 from app.ai.schemas import (
-    LIVE_CAPTION_SCHEMA, QUIZ_SCHEMA, RESTRUCTURE_SCHEMA, LiveCaptionOut, QuizOutRaw, RestructureOut,
+    CHAT_SCHEMA, LIVE_CAPTION_SCHEMA, QUIZ_SCHEMA, RESTRUCTURE_SCHEMA, ChatOut, LiveCaptionOut, QuizOutRaw,
+    RestructureOut,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,7 +104,9 @@ class GatewayTextProvider(AIProvider):
         return await self._json_call(self.model_main, quiz_messages(pages, transcripts), QUIZ_SCHEMA, QuizOutRaw)
 
     async def chat(self, pages, transcripts, history, message) -> dict[str, Any]:
-        raise NotImplementedError("9단계에서 구현")
+        out = await self._json_call(self.model_main, chat_messages(pages, transcripts, history, message),
+                                    CHAT_SCHEMA, ChatOut)
+        return {"kind": out["kind"], "answer": out["answer"].strip(), "related_page": out["related_page"] or None}
 
 
 def describe_structure(value: Any, depth: int = 0) -> Any:

@@ -8,7 +8,8 @@ from app.deps import get_current_user, require_student, require_teacher
 from app.models import Lesson, LessonStatus, Quiz, QuizAttempt, Role, User
 from app.permissions import get_accessible_lesson, get_owned_lesson
 from app.schemas import AttemptCreate, AttemptOut, QuizOut, QuizQuestionOut
-from app.services.quiz import QuizValidationError, check_answers, grade, normalize_questions, quiz_input
+from app.services.content import lesson_content
+from app.services.quiz import QuizValidationError, check_answers, grade, normalize_questions
 
 router = APIRouter(tags=["quiz"])
 
@@ -59,7 +60,7 @@ async def create_quiz(
     if lesson.status not in _QUIZ_READY:
         raise HTTPException(status.HTTP_409_CONFLICT, "승인한 회차만 퀴즈를 만들 수 있습니다")
 
-    pages, transcripts = quiz_input(session, lesson.id)
+    pages, transcripts = lesson_content(session, lesson.id)
     try:
         raw = await provider.generate_quiz(pages, transcripts)
         questions = normalize_questions(raw.get("questions", []), {p["page_no"] for p in pages})

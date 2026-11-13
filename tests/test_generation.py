@@ -214,3 +214,22 @@ def test_approve_flow(client, session, ctx):
 
     set_status(session, ctx["lesson_id"], LessonStatus.live)
     assert client.post(url, headers=h).status_code == 409
+
+
+def test_generation_finishes_even_if_status_was_recovered_meanwhile(client, session, ctx):
+    """다른 프로세스가 시작하며 진행 중 회차를 ready로 바꿔도 끝나면 progress=100."""
+    from sqlmodel import Session as S
+
+    from app.db import get_engine
+    from app.services.generation import recover_stuck_generations, run_generation
+
+    class RecoversMidway(MockProvider):
+        async def restructure_page(self, source_text):
+            recover_stuck_generations()  # 작업 도중 다른 프로세스의 시작 처리가 끼어든 상황
+            return await super().restructure_page(source_text)
+
+    set_status(session, ctx["lesson_id"], LessonStatus.generating)
+    asyncio.run(run_generation(ctx["lesson_id"], RecoversMidway(), concurrency=1))
+    with S(get_engine()) as s:
+        lesson = s.get(Lesson, ctx["lesson_id"])
+        assert lesson.status == LessonStatus.ready and lesson.progress == 100

@@ -124,3 +124,27 @@ QUIZ_SCHEMA = strict_json_schema(
         "additionalProperties": False,
     },
 )
+
+
+CHAT_KINDS = ("lesson", "basic", "not_covered", "off_topic", "care")
+
+
+class ChatOut(_Strict):
+    kind: str = "lesson"  # 알 수 없는 값은 서비스(finalize_chat)에서 처리
+    answer: str = Field(min_length=1)
+    related_page: int | None = None  # 0이면 없음 → None
+
+
+CHAT_SCHEMA = strict_json_schema(
+    "lesson_chat",
+    {
+        "type": "object",
+        "properties": {
+            "kind": {"type": "string", "enum": list(CHAT_KINDS)},
+            "answer": {"type": "string"},
+            "related_page": {"type": "integer"},
+        },
+        "required": ["kind", "answer", "related_page"],
+        "additionalProperties": False,
+    },
+)

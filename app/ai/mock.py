@@ -62,8 +62,19 @@ class MockProvider(AIProvider):
     async def chat(
         self, pages: list[dict[str, Any]], transcripts: list[dict[str, Any]], history: list[dict[str, str]], message: str
     ) -> dict[str, Any]:
-        related = pages[0]["page_no"] if pages else None
-        return {"answer": "좋은 질문이에요. 교과서 내용을 다시 볼까요?", "related_page": related}
+        """질문 낱말(2글자 이상)이 수업 내용에 나오면 그 페이지를, 아니면 '수업과 다른 이야기' 안내.
+        (실제 모델의 '주제는 맞지만 수업에서 안 다룸' 구분은 mock에서 흉내 내지 않음)"""
+        from app.ai.prompts import OFF_TOPIC_ANSWER
+
+        words = [w.strip("?.!,~") for w in message.split()]
+        words = [w[:2] for w in words if len(w) >= 2]  # "광합성은" → "광합" (조사 무시용 단순 처리)
+        talk = {t["page_no"]: t["text"] for t in transcripts}
+        for p in pages:
+            text = " ".join([*p.get("easy_sentences", []), p.get("source_text", ""), talk.get(p["page_no"], "")])
+            if any(w in text for w in words):
+                return {"kind": "lesson", "answer": f"{p['page_no']}쪽에 나와요. 그 페이지를 다시 읽어 볼까요?",
+                        "related_page": p["page_no"]}
+        return {"kind": "off_topic", "answer": OFF_TOPIC_ANSWER, "related_page": None}
 
 
 class MockImageProvider(ImageProvider):

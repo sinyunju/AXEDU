@@ -43,7 +43,7 @@ class AIProvider(ABC):
     async def chat(
         self, pages: list[dict[str, Any]], transcripts: list[dict[str, Any]], history: list[dict[str, str]], message: str
     ) -> dict[str, Any]:
-        """→ {answer: str, related_page: int | None}"""
+        """→ {kind: lesson|basic|not_covered|off_topic|care, answer: str, related_page: int | None}"""
 
 
 class ImageProvider(ABC):
