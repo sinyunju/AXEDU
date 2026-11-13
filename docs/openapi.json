@@ -1,0 +1,2569 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "쉬운수업 API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/auth/signup": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Signup",
+        "operationId": "signup_auth_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "operationId": "me_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/courses": {
+      "get": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "내 과목 목록 (교사: 만든 과목 / 학생: 등록한 과목)",
+        "operationId": "list_courses_courses_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CourseOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Courses Courses Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "과목 생성 (교사)",
+        "operationId": "create_course_courses_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/courses/join": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "초대 코드로 과목 등록 (학생)",
+        "operationId": "join_course_courses_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/courses/{course_id}": {
+      "get": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "과목 정보 + 회차 목록",
+        "operationId": "get_course_courses__course_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/courses/{course_id}/students": {
+      "get": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "등록 학생 목록 (교사)",
+        "operationId": "list_students_courses__course_id__students_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CourseStudent"
+                  },
+                  "title": "Response List Students Courses  Course Id  Students Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/courses/{course_id}/lessons": {
+      "post": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "회차 생성 + PDF 업로드 (교사)",
+        "description": "PDF를 페이지별로 나눠 텍스트를 추출하고 PNG로 렌더링한다. 재구성은 POST /lessons/{id}/generate 로 따로 시작.",
+        "operationId": "upload_lesson_courses__course_id__lessons_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_lesson_courses__course_id__lessons_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "PDF가 아니거나 읽을 수 없음"
+          },
+          "409": {
+            "description": "회차 번호 중복"
+          },
+          "413": {
+            "description": "파일이 너무 큼"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}": {
+      "get": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "회차 상세 (교사: 전체 / 학생: 승인된 회차·내용만)",
+        "operationId": "get_lesson_lessons__lesson_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/generate": {
+      "post": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "페이지별 쉬운 문장 재구성 시작 (교사)",
+        "description": "백그라운드로 실행된다. 진행률은 GET /lessons/{id} 의 progress(0~100)와 status(generating → ready)로 확인.",
+        "operationId": "generate_lesson_lessons__lesson_id__generate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "이미 진행 중이거나 승인 이후 회차"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/pages/{page_no}": {
+      "put": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "쉬운 문장·어려운 낱말 수정 (교사)",
+        "operationId": "update_page_lessons__lesson_id__pages__page_no__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Page No"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "페이지 보기 (학생 화면용, 교사도 사용 가능)",
+        "description": "원본 이미지, 쉬운 문장, 어려운 낱말, 생성 이미지, 지금까지의 쉬운 자막, 선생님의 현재 페이지. 학생은 승인된 회차만 조회 가능.",
+        "operationId": "get_page_view_lessons__lesson_id__pages__page_no__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Page No"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/pages/{page_no}/image": {
+      "post": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "페이지 이미지 생성 (교사)",
+        "description": "prompt를 비우면 AI 제안(image_suggestion.prompt)을 사용. 기존 생성 이미지는 교체된다. MOCK_IMAGE=true면 실제 호출 없이 자리표시 이미지를 만든다.",
+        "operationId": "generate_page_image_lessons__lesson_id__pages__page_no__image_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Page No"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ImageRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "사용할 프롬프트가 없음"
+          },
+          "502": {
+            "description": "이미지 생성 API 실패"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "이미지·이미지 제안 삭제 (교사)",
+        "operationId": "delete_page_image_lessons__lesson_id__pages__page_no__image_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Page No"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/approve": {
+      "post": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "회차 승인 → 학생에게 공개 (교사)",
+        "operationId": "approve_lesson_lessons__lesson_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "재구성 전/중이거나 이미 수업이 시작된 회차"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/start": {
+      "post": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "실시간 수업 시작 (교사)",
+        "description": "approved → live (선생님 페이지는 1쪽부터). ended → live는 수업 재개로 보고 페이지를 유지한다. 이미 live면 그대로 반환. WebSocket으로 lesson_started를 보낸다.",
+        "operationId": "start_lesson_lessons__lesson_id__start_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "승인 전 회차"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/end": {
+      "post": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "수업 종료 (교사)",
+        "description": "live → ended. 이미 ended면 그대로 반환. WebSocket으로 lesson_ended를 보낸다.",
+        "operationId": "end_lesson_lessons__lesson_id__end_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "진행 중인 수업이 아님"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/quiz": {
+      "post": {
+        "tags": [
+          "quiz"
+        ],
+        "summary": "퀴즈 생성 (교사)",
+        "description": "승인된 페이지 내용과 교사 발화로 OX/3지선다 5문항 안팎을 만든다. 이미 있으면 기존 퀴즈를 200으로 반환.",
+        "operationId": "create_quiz_lessons__lesson_id__quiz_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizOut"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "이미 만든 퀴즈"
+          },
+          "409": {
+            "description": "승인 전 회차"
+          },
+          "502": {
+            "description": "AI 생성 실패"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "quiz"
+        ],
+        "summary": "퀴즈 조회 (학생에게는 정답·해설 제외)",
+        "operationId": "get_quiz_lessons__lesson_id__quiz_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuizOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/quiz/attempts": {
+      "post": {
+        "tags": [
+          "quiz"
+        ],
+        "summary": "퀴즈 제출·채점 (학생)",
+        "description": "채점 결과와 해설을 저장하고 반환한다. 여러 번 제출할 수 있고, 제출할 때마다 기록이 쌓인다.",
+        "operationId": "submit_attempt_lessons__lesson_id__quiz_attempts_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttemptCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttemptOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/quiz/attempts/me": {
+      "get": {
+        "tags": [
+          "quiz"
+        ],
+        "summary": "내 풀이 기록 (학생, 최신순)",
+        "operationId": "my_attempts_lessons__lesson_id__quiz_attempts_me_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AttemptOut"
+                  },
+                  "title": "Response My Attempts Lessons  Lesson Id  Quiz Attempts Me Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/chat": {
+      "post": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "챗봇에게 질문 (학생)",
+        "description": "이 회차의 승인된 페이지 내용과 교사 발화를 근거로 답한다. 수업 주제와 바로 이어지는 기초 질문은 교과서 수준의 기본 지식으로 답하되 근거 페이지(related_page)를 반드시 붙이고(못 찾으면 심화로 처리), 수업에서 다루지 않은 심화 내용은 \"오늘 수업에서는 거기까지 나오지 않았어요…\", 무관한 질문은 \"이건 오늘 수업과 다른 이야기예요…\"로 안내한다. 이 학생의 최근 대화(CHAT_HISTORY_LIMIT개)를 문맥으로 쓴다.",
+        "operationId": "ask_lessons__lesson_id__chat_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatExchange"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "AI 호출 실패 (질문도 저장하지 않음)"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "chat"
+        ],
+        "summary": "내 챗봇 대화 기록 (학생, 오래된 것부터)",
+        "operationId": "my_chat_lessons__lesson_id__chat_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChatMessageOut"
+                  },
+                  "title": "Response My Chat Lessons  Lesson Id  Chat Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AttemptAnswer": {
+        "properties": {
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Answer",
+            "description": "ox는 \"O\"/\"X\", choice는 보기 글 그대로",
+            "examples": [
+              "O"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "answer"
+        ],
+        "title": "AttemptAnswer"
+      },
+      "AttemptCreate": {
+        "properties": {
+          "answers": {
+            "items": {
+              "$ref": "#/components/schemas/AttemptAnswer"
+            },
+            "type": "array",
+            "title": "Answers",
+            "description": "답하지 않은 문항은 오답 처리"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "AttemptCreate"
+      },
+      "AttemptOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "quiz_id": {
+            "type": "integer",
+            "title": "Quiz Id"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Submitted At"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AttemptResultItem"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "quiz_id",
+          "score",
+          "total",
+          "submitted_at",
+          "results"
+        ],
+        "title": "AttemptOut"
+      },
+      "AttemptResultItem": {
+        "properties": {
+          "question_id": {
+            "type": "integer",
+            "title": "Question Id"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "correct_answer": {
+            "type": "string",
+            "title": "Correct Answer"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "page_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page No"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question_id",
+          "answer",
+          "correct",
+          "correct_answer",
+          "explanation",
+          "page_no"
+        ],
+        "title": "AttemptResultItem"
+      },
+      "Body_upload_lesson_courses__course_id__lessons_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "수업 자료 PDF"
+          },
+          "session_no": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Session No",
+            "description": "회차 번호"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "class_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Date",
+            "description": "수업 날짜 (YYYY-MM-DD)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "session_no",
+          "title"
+        ],
+        "title": "Body_upload_lesson_courses__course_id__lessons_post"
+      },
+      "CaptionItem": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "content",
+              "flow",
+              "notice"
+            ],
+            "title": "Type",
+            "description": "content: 수업 내용 / flow: 수업 흐름 안내(\"지금부터 정리해요\") / notice: 과제·준비물 안내"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "type"
+        ],
+        "title": "CaptionItem"
+      },
+      "ChatExchange": {
+        "properties": {
+          "question": {
+            "$ref": "#/components/schemas/ChatMessageOut"
+          },
+          "answer": {
+            "$ref": "#/components/schemas/ChatMessageOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question",
+          "answer"
+        ],
+        "title": "ChatExchange"
+      },
+      "ChatMessageOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "\"user\" | \"assistant\""
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "related_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Related Page",
+            "description": "답변의 근거 페이지 (assistant만)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "content",
+          "related_page",
+          "created_at"
+        ],
+        "title": "ChatMessageOut"
+      },
+      "ChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Message",
+            "examples": [
+              "광합성은 어디에서 일어나요?"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ChatRequest"
+      },
+      "CourseCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "examples": [
+              "과학"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Description",
+            "default": "",
+            "examples": [
+              "2학기 과학 수업"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CourseCreate"
+      },
+      "CourseDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "teacher_id": {
+            "type": "integer",
+            "title": "Teacher Id"
+          },
+          "teacher_name": {
+            "type": "string",
+            "title": "Teacher Name"
+          },
+          "invite_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invite Code",
+            "description": "교사에게만 제공. 학생에게는 null"
+          },
+          "lesson_count": {
+            "type": "integer",
+            "title": "Lesson Count",
+            "description": "회차 수. 학생에게는 볼 수 있는(승인된) 회차만 셈"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "lessons": {
+            "items": {
+              "$ref": "#/components/schemas/LessonBrief"
+            },
+            "type": "array",
+            "title": "Lessons",
+            "description": "회차 번호 순. 학생에게는 승인된(approved/live/ended) 회차만"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "teacher_id",
+          "teacher_name",
+          "lesson_count",
+          "created_at",
+          "lessons"
+        ],
+        "title": "CourseDetail"
+      },
+      "CourseOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "teacher_id": {
+            "type": "integer",
+            "title": "Teacher Id"
+          },
+          "teacher_name": {
+            "type": "string",
+            "title": "Teacher Name"
+          },
+          "invite_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invite Code",
+            "description": "교사에게만 제공. 학생에게는 null"
+          },
+          "lesson_count": {
+            "type": "integer",
+            "title": "Lesson Count",
+            "description": "회차 수. 학생에게는 볼 수 있는(승인된) 회차만 셈"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "teacher_id",
+          "teacher_name",
+          "lesson_count",
+          "created_at"
+        ],
+        "title": "CourseOut"
+      },
+      "CourseStudent": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "login_id": {
+            "type": "string",
+            "title": "Login Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "login_id",
+          "name",
+          "joined_at"
+        ],
+        "title": "CourseStudent"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HardWord": {
+        "properties": {
+          "word": {
+            "type": "string",
+            "title": "Word"
+          },
+          "meaning": {
+            "type": "string",
+            "title": "Meaning"
+          }
+        },
+        "type": "object",
+        "required": [
+          "word",
+          "meaning"
+        ],
+        "title": "HardWord"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "mock_ai": {
+            "type": "boolean",
+            "title": "Mock Ai"
+          },
+          "mock_image": {
+            "type": "boolean",
+            "title": "Mock Image"
+          },
+          "ai_provider": {
+            "type": "string",
+            "title": "Ai Provider"
+          },
+          "image_provider": {
+            "type": "string",
+            "title": "Image Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "mock_ai",
+          "mock_image",
+          "ai_provider",
+          "image_provider"
+        ],
+        "title": "HealthResponse"
+      },
+      "ImageRequest": {
+        "properties": {
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt",
+            "description": "비우면 AI가 제안한 image_suggestion.prompt를 사용",
+            "examples": [
+              "잎에 햇빛이 비치고 뿌리로 물이 올라가는 모습"
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ImageRequest"
+      },
+      "ImageSuggestion": {
+        "properties": {
+          "needed": {
+            "type": "boolean",
+            "title": "Needed"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "needed"
+        ],
+        "title": "ImageSuggestion"
+      },
+      "JoinRequest": {
+        "properties": {
+          "invite_code": {
+            "type": "string",
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Invite Code",
+            "description": "대소문자 구분 없음",
+            "examples": [
+              "DEMO01"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "invite_code"
+        ],
+        "title": "JoinRequest"
+      },
+      "JoinResponse": {
+        "properties": {
+          "course": {
+            "$ref": "#/components/schemas/CourseOut"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "course",
+          "joined_at"
+        ],
+        "title": "JoinResponse"
+      },
+      "LessonBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "session_no": {
+            "type": "integer",
+            "title": "Session No"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "class_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LessonStatus"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "session_no",
+          "title",
+          "class_date",
+          "status",
+          "progress"
+        ],
+        "title": "LessonBrief"
+      },
+      "LessonDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "integer",
+            "title": "Course Id"
+          },
+          "session_no": {
+            "type": "integer",
+            "title": "Session No"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "class_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LessonStatus"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress",
+            "description": "페이지 재구성 진행률 0~100"
+          },
+          "current_page": {
+            "type": "integer",
+            "title": "Current Page"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/PageOut"
+            },
+            "type": "array",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "session_no",
+          "title",
+          "class_date",
+          "status",
+          "progress",
+          "current_page",
+          "page_count",
+          "created_at",
+          "pages"
+        ],
+        "title": "LessonDetail"
+      },
+      "LessonOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "course_id": {
+            "type": "integer",
+            "title": "Course Id"
+          },
+          "session_no": {
+            "type": "integer",
+            "title": "Session No"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "class_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LessonStatus"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress",
+            "description": "페이지 재구성 진행률 0~100"
+          },
+          "current_page": {
+            "type": "integer",
+            "title": "Current Page"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "course_id",
+          "session_no",
+          "title",
+          "class_date",
+          "status",
+          "progress",
+          "current_page",
+          "page_count",
+          "created_at"
+        ],
+        "title": "LessonOut"
+      },
+      "LessonStatus": {
+        "type": "string",
+        "enum": [
+          "uploaded",
+          "generating",
+          "ready",
+          "approved",
+          "live",
+          "ended"
+        ],
+        "title": "LessonStatus"
+      },
+      "LoginRequest": {
+        "properties": {
+          "login_id": {
+            "type": "string",
+            "title": "Login Id",
+            "examples": [
+              "teacher1"
+            ]
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "examples": [
+              "pass1234"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "login_id",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "LoginResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserBrief"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "user"
+        ],
+        "title": "LoginResponse"
+      },
+      "PageOut": {
+        "properties": {
+          "page_no": {
+            "type": "integer",
+            "title": "Page No"
+          },
+          "image_url": {
+            "type": "string",
+            "title": "Image Url",
+            "description": "원본 페이지 PNG (/files/...)"
+          },
+          "easy_sentences": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Easy Sentences",
+            "description": "학생에게는 승인된 페이지만 채워짐"
+          },
+          "hard_words": {
+            "items": {
+              "$ref": "#/components/schemas/HardWord"
+            },
+            "type": "array",
+            "title": "Hard Words"
+          },
+          "generated_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated Image Url"
+          },
+          "approved": {
+            "type": "boolean",
+            "title": "Approved"
+          },
+          "source_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text",
+            "description": "교사에게만 제공"
+          },
+          "image_suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageSuggestion"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "교사에게만 제공"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_no",
+          "image_url",
+          "easy_sentences",
+          "hard_words",
+          "generated_image_url",
+          "approved"
+        ],
+        "title": "PageOut"
+      },
+      "PageUpdate": {
+        "properties": {
+          "easy_sentences": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Easy Sentences",
+            "examples": [
+              [
+                "식물은 햇빛으로 양분을 만들어요."
+              ]
+            ]
+          },
+          "hard_words": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/HardWord"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hard Words"
+          }
+        },
+        "type": "object",
+        "title": "PageUpdate"
+      },
+      "PageView": {
+        "properties": {
+          "lesson_id": {
+            "type": "integer",
+            "title": "Lesson Id"
+          },
+          "page_no": {
+            "type": "integer",
+            "title": "Page No"
+          },
+          "page_count": {
+            "type": "integer",
+            "title": "Page Count"
+          },
+          "lesson_status": {
+            "$ref": "#/components/schemas/LessonStatus"
+          },
+          "teacher_page": {
+            "type": "integer",
+            "title": "Teacher Page",
+            "description": "선생님이 지금 보고 있는 페이지 (Lesson.current_page)"
+          },
+          "image_url": {
+            "type": "string",
+            "title": "Image Url"
+          },
+          "easy_sentences": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Easy Sentences"
+          },
+          "hard_words": {
+            "items": {
+              "$ref": "#/components/schemas/HardWord"
+            },
+            "type": "array",
+            "title": "Hard Words"
+          },
+          "generated_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated Image Url"
+          },
+          "easy_transcript": {
+            "items": {
+              "$ref": "#/components/schemas/CaptionItem"
+            },
+            "type": "array",
+            "title": "Easy Transcript",
+            "description": "이 페이지에서 지금까지 나온 선생님 말씀의 쉬운 자막"
+          },
+          "transcript_hard_words": {
+            "items": {
+              "$ref": "#/components/schemas/HardWord"
+            },
+            "type": "array",
+            "title": "Transcript Hard Words",
+            "description": "실시간 자막에서 나온 어려운 낱말"
+          },
+          "transcript_updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lesson_id",
+          "page_no",
+          "page_count",
+          "lesson_status",
+          "teacher_page",
+          "image_url",
+          "easy_sentences",
+          "hard_words",
+          "generated_image_url",
+          "easy_transcript",
+          "transcript_hard_words",
+          "transcript_updated_at"
+        ],
+        "title": "PageView",
+        "description": "학생 화면의 한 페이지. 학생은 자유롭게 페이지를 이동하고, teacher_page로 선생님 위치만 안다."
+      },
+      "QuizOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "lesson_id": {
+            "type": "integer",
+            "title": "Lesson Id"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuizQuestionOut"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "lesson_id",
+          "questions"
+        ],
+        "title": "QuizOut"
+      },
+      "QuizQuestionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "\"ox\" | \"choice\""
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "choices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Choices",
+            "description": "ox는 [\"O\", \"X\"], choice는 보기 3개"
+          },
+          "page_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page No",
+            "description": "근거 페이지"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer",
+            "description": "교사에게만 제공 (학생은 제출 후 결과에서 확인)"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation",
+            "description": "교사에게만 제공"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "question",
+          "choices",
+          "page_no"
+        ],
+        "title": "QuizQuestionOut"
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "teacher",
+          "student"
+        ],
+        "title": "Role"
+      },
+      "SignupRequest": {
+        "properties": {
+          "login_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9_.-]+$",
+            "title": "Login Id",
+            "examples": [
+              "teacher1"
+            ]
+          },
+          "password": {
+            "type": "string",
+            "minLength": 4,
+            "title": "Password",
+            "examples": [
+              "pass1234"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Name",
+            "examples": [
+              "김선생"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "examples": [
+              "teacher"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "login_id",
+          "password",
+          "name",
+          "role"
+        ],
+        "title": "SignupRequest"
+      },
+      "UserBrief": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "login_id": {
+            "type": "string",
+            "title": "Login Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "login_id",
+          "name",
+          "role"
+        ],
+        "title": "UserBrief"
+      },
+      "UserOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "login_id": {
+            "type": "string",
+            "title": "Login Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "login_id",
+          "name",
+          "role",
+          "created_at"
+        ],
+        "title": "UserOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "POST /auth/login 으로 받은 access_token",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

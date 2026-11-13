@@ -124,3 +124,19 @@ def test_list_students(client, users):
     assert client.get(url, headers=users["t2"]["headers"]).status_code == 403
     assert client.get(url, headers=users["s1"]["headers"]).status_code == 403
     assert client.get("/courses/9999/students", headers=users["t1"]["headers"]).status_code == 404
+
+
+def test_lesson_count(client, session, users):
+    c = create_course(client, users["t1"])
+    assert c["lesson_count"] == 0
+    join(client, users["s1"], c["invite_code"])
+    for no, st in enumerate(LessonStatus, start=1):  # 6가지 상태 각각 하나씩
+        session.add(Lesson(course_id=c["id"], session_no=no, title=f"{no}회차", status=st))
+    session.commit()
+
+    teacher = client.get("/courses", headers=users["t1"]["headers"]).json()
+    assert teacher[0]["lesson_count"] == 6
+    student = client.get("/courses", headers=users["s1"]["headers"]).json()
+    assert student[0]["lesson_count"] == 3  # approved / live / ended만
+    detail = client.get(f"/courses/{c['id']}", headers=users["s1"]["headers"]).json()
+    assert detail["lesson_count"] == len(detail["lessons"]) == 3

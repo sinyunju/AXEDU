@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.db import get_session
 from app.deps import get_current_user, require_student, require_teacher
@@ -14,6 +14,13 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 _INVITE_CODE_ATTEMPTS = 10
 
 
+def _lesson_count(session: Session, course_id: int, viewer: User) -> int:
+    stmt = select(func.count()).select_from(Lesson).where(Lesson.course_id == course_id)
+    if viewer.role == Role.student:
+        stmt = stmt.where(col(Lesson.status).in_(STUDENT_VISIBLE_STATUSES))
+    return session.exec(stmt).one()
+
+
 def _course_out(session: Session, course: Course, viewer: User) -> CourseOut:
     teacher = session.get(User, course.teacher_id)
     return CourseOut(
@@ -23,6 +30,7 @@ def _course_out(session: Session, course: Course, viewer: User) -> CourseOut:
         teacher_id=course.teacher_id,
         teacher_name=teacher.name if teacher else "",
         invite_code=course.invite_code if viewer.role == Role.teacher else None,
+        lesson_count=_lesson_count(session, course.id, viewer),
         created_at=course.created_at,
     )
 

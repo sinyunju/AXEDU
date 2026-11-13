@@ -35,7 +35,7 @@ def login(body: LoginRequest, session: Session = Depends(get_session)) -> LoginR
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "아이디 또는 비밀번호가 올바르지 않습니다")
     return LoginResponse(
         access_token=create_access_token(user.id, user.role),
-        user=UserBrief(id=user.id, name=user.name, role=user.role),
+        user=UserBrief(id=user.id, login_id=user.login_id, name=user.name, role=user.role),
     )
 
 

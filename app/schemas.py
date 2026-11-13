@@ -28,12 +28,12 @@ class LoginRequest(BaseModel):
 
 class UserBrief(BaseModel):
     id: int
+    login_id: str
     name: str
     role: Role
 
 
 class UserOut(UserBrief):
-    login_id: str
     created_at: datetime
 
 
@@ -56,6 +56,7 @@ class CourseOut(BaseModel):
     teacher_id: int
     teacher_name: str
     invite_code: str | None = Field(None, description="교사에게만 제공. 학생에게는 null")
+    lesson_count: int = Field(description="회차 수. 학생에게는 볼 수 있는(승인된) 회차만 셈")
     created_at: datetime
 
 

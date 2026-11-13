@@ -6,7 +6,9 @@
 
 - 기술: Python 3.12+ (3.13에서 개발·테스트), FastAPI, SQLite + SQLModel, PyMuPDF, 안뇽GPT API Gateway
 - 상세 명세: [CLAUDE.md](CLAUDE.md)
-- **API 문서(프론트 연동 기준): 서버 실행 후 http://localhost:8000/docs**
+- **API 문서(프론트 연동 기준):** 서버 실행 후 http://localhost:8000/docs
+  - 서버 없이 보려면 **[docs/openapi.json](docs/openapi.json)** (OpenAPI 3 명세). https://editor.swagger.io 에 붙여 넣거나 코드 생성기에 넣어 쓸 수 있습니다.
+  - WebSocket은 OpenAPI에 포함되지 않으므로 아래 [WebSocket](#websocket) 절을 보세요.
 
 ## 로컬 실행
 
@@ -20,6 +22,8 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 
 - 헬스체크: `GET /health` → `{"status":"ok","mock_ai":true,"mock_image":true,...}`
 - 테스트: `.venv/bin/pytest -q` (항상 MOCK 모드 + 임시 DB로 실행, API 키 불필요)
+- API 명세 파일 갱신: `.venv/bin/python -m scripts.export_openapi` → `docs/openapi.json`
+  (라우터·스키마를 바꾸면 다시 실행해서 함께 커밋. 갱신을 빠뜨리면 테스트가 실패합니다)
 
 > **서버는 프로세스 하나로만 실행하세요.** WebSocket 연결과 실시간 자막 상태를 메모리에 두기 때문에
 > `--workers 2` 이상이나 여러 인스턴스로 띄우면 교사와 학생 메시지가 서로 전달되지 않습니다.
@@ -31,7 +35,7 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 |---|---|---|
 | `DATABASE_URL` | `sqlite:///./easyclass.db` | DB 주소 |
 | `STORAGE_DIR` | `./storage` | 페이지 PNG·생성 이미지 저장 위치 (`/files/...`로 제공) |
-| `FRONTEND_ORIGINS` | `http://localhost:3000,http://localhost:5173` | CORS 허용 도메인 (쉼표 구분, Vercel 도메인 추가) |
+| `FRONTEND_ORIGINS` | `http://localhost:3000,http://localhost:5173` | CORS 허용 도메인 (쉼표 구분, Vercel 도메인 추가). 같은 Wi-Fi 기기 접속은 아래 참고 |
 | `JWT_SECRET` | — | **반드시 변경.** 32바이트 이상 랜덤 문자열 |
 | `JWT_EXPIRE_MINUTES` | `720` | 로그인 토큰 유효 시간 |
 | `MOCK_AI` | `true` | `true`면 텍스트 AI(재구성·자막·퀴즈·챗봇)를 호출하지 않고 고정 응답 |
@@ -45,6 +49,21 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | `LIVE_CAPTION_INTERVAL_SECONDS` | `15` | 같은 페이지 실시간 자막 호출 최소 간격 |
 | `CHAT_HISTORY_LIMIT` | `10` | 챗봇이 문맥으로 쓰는 이전 대화 수 |
 | `MAX_UPLOAD_MB`, `MAX_PDF_PAGES`, `PDF_RENDER_ZOOM` | `30`, `100`, `1.5` | PDF 업로드 제한·렌더링 배율 |
+
+### 같은 Wi-Fi의 다른 기기(태블릿·휴대폰)에서 접속하기
+
+1. 서버 PC의 IP 확인: macOS `ipconfig getifaddr en0`, Windows `ipconfig` (예: `192.168.0.12`)
+2. `.env`의 `FRONTEND_ORIGINS`에 프론트 주소를 추가하고 서버를 재시작
+   ```
+   FRONTEND_ORIGINS=http://localhost:3000,http://localhost:5173,http://192.168.0.12:5173
+   ```
+3. 서버를 모든 네트워크에서 받도록 실행 (기본 `127.0.0.1`은 같은 PC에서만 접속됨)
+   ```bash
+   .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+4. 프론트의 API·WebSocket 주소도 `http://192.168.0.12:8000`, `ws://192.168.0.12:8000`으로 맞추기.
+   프론트 개발 서버도 외부 접속을 허용해야 합니다 (Vite: `npm run dev -- --host`).
+   접속이 안 되면 PC 방화벽에서 8000·5173 포트를 허용하세요.
 
 `MOCK_AI=false` 또는 `MOCK_IMAGE=false`인데 `AI_API_KEY`가 비어 있으면 서버가 시작하지 않습니다.
 키를 넣은 뒤 연결 확인: `.venv/bin/python -m scripts.ai_smoke` (텍스트 1회), `--image` (이미지 1장 추가, 크레딧 소모)
@@ -72,22 +91,42 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 
 ## API 요약
 
-인증이 필요한 API는 `Authorization: Bearer <access_token>`. 에러는 `{"detail": "..."}`.
-권한이 없으면 403, 없는 리소스는 404 (학생에게 승인 전 회차도 404). 자세한 요청/응답 스키마는 `/docs`.
+인증이 필요한 API는 `Authorization: Bearer <access_token>`. 자세한 요청/응답 스키마는 `/docs` 또는 [docs/openapi.json](docs/openapi.json).
+
+**오류 형식**
+
+- 대부분의 오류(400·401·403·404·409·413·502, 그리고 서버가 직접 판단한 일부 422)는 `detail`이 **문자열**입니다.
+  ```json
+  {"detail": "이미 사용 중인 아이디입니다"}
+  ```
+- 요청 본문·폼·경로 값이 스키마에 맞지 않는 **입력값 검증 오류(422)**는 `detail`이 **배열**입니다.
+  ```json
+  {"detail": [{"type": "string_too_short", "loc": ["body", "login_id"], "msg": "String should have at least 3 characters", "input": "ab", "ctx": {"min_length": 3}}]}
+  ```
+  `loc`의 마지막 값이 문제가 된 필드 이름입니다. 프론트에서는 `typeof detail === "string"`으로 두 경우를 나눠 처리하세요.
+- 권한이 없으면 403, 없는 리소스는 404 (학생에게는 승인 전 회차도 404로 숨김), 로그인이 안 됐거나 토큰이 무효·만료면 401.
+
+**입력 규칙**
+
+- 아이디(`login_id`): 3~32자, 영문·숫자·`_` `.` `-`만 (한글 불가)
+- 비밀번호: 4자 이상 (72바이트 이하)
+- 초대 코드: 영문 대문자+숫자 6자 (예: `DEMO01`). 등록할 때는 소문자로 입력해도 됩니다.
+- `class_date`: 날짜만 `YYYY-MM-DD` (예: `2026-11-20`). 시간을 붙이면 422.
+- **회원가입은 토큰을 주지 않습니다.** `POST /auth/signup` 성공(201) 후 `POST /auth/login`으로 로그인해서 토큰을 받으세요.
 
 | 메서드 | 경로 | 대상 | 설명 |
 |---|---|---|---|
-| POST | `/auth/signup` | 누구나 | `{login_id, password, name, role}` |
-| POST | `/auth/login` | 누구나 | → `{access_token, user}` |
+| POST | `/auth/signup` | 누구나 | `{login_id, password, name, role}` → 201 사용자 정보 (토큰 없음) |
+| POST | `/auth/login` | 누구나 | `{login_id, password}` → `{access_token, token_type, user: {id, login_id, name, role}}` |
 | GET | `/auth/me` | 로그인 | 내 정보 |
-| POST | `/courses` | 교사 | 과목 생성 + 6자리 초대 코드 |
-| GET | `/courses` | 둘 다 | 교사: 만든 과목 / 학생: 등록 과목 (학생에게 초대 코드는 `null`) |
+| POST | `/courses` | 교사 | `{name, description}` (`description` 생략 가능) → 과목 + 6자리 초대 코드 |
+| GET | `/courses` | 둘 다 | 교사: 만든 과목 / 학생: 등록 과목. 항목마다 `lesson_count`(학생은 승인된 회차만 셈), 학생에게 `invite_code`는 `null` |
 | POST | `/courses/join` | 학생 | `{invite_code}` (대소문자 무시) |
 | GET | `/courses/{id}` | 둘 다 | 과목 + 회차 목록 |
 | GET | `/courses/{id}/students` | 교사 | 등록 학생 |
-| POST | `/courses/{id}/lessons` | 교사 | multipart `file`(PDF), `session_no`, `title`, `class_date?` |
+| POST | `/courses/{id}/lessons` | 교사 | multipart `file`(PDF), `session_no`, `title`, `class_date?`(`YYYY-MM-DD`) |
 | POST | `/lessons/{id}/generate` | 교사 | 재구성 시작 (202, 진행률은 `GET /lessons/{id}`의 `progress`) |
-| GET | `/lessons/{id}` | 둘 다 | 회차 + 페이지 (학생: 승인 내용만, 원문·이미지 제안 제외) |
+| GET | `/lessons/{id}` | 둘 다 | 회차 + 페이지. 학생에게는 `source_text`(원문)와 `image_suggestion`(AI 이미지 제안)이 `null`, 원본 페이지 이미지 `image_url`은 그대로 내려감. 승인 안 된 페이지의 쉬운 문장·낱말·생성 이미지는 비어 있음 |
 | PUT | `/lessons/{id}/pages/{n}` | 교사 | `easy_sentences`, `hard_words` 수정 |
 | POST / DELETE | `/lessons/{id}/pages/{n}/image` | 교사 | 이미지 생성(`{prompt?}`, 비우면 AI 제안 사용) / 삭제 |
 | POST | `/lessons/{id}/approve` | 교사 | 승인 → 학생 공개 |
