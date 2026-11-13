@@ -35,9 +35,9 @@ class MockProvider(AIProvider):
             ),
         }
 
-    async def live_caption(self, source_text: str, transcript: str, previous_easy: list[str]) -> dict[str, Any]:
+    async def live_caption(self, source_text: str, transcript: str, previous_easy: list[dict[str, str]]) -> dict[str, Any]:
         snippet = transcript.strip()[-25:] if transcript.strip() else ""
-        new = [f"선생님 말씀: {snippet}"] if snippet else []
+        new = [{"text": f"선생님 말씀: {snippet}", "type": "content"}] if snippet else []
         return {"easy_transcript": [*previous_easy, *new], "hard_words": []}
 
     async def generate_quiz(self, pages: list[dict[str, Any]], transcripts: list[dict[str, Any]]) -> dict[str, Any]:

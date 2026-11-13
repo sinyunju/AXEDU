@@ -31,9 +31,9 @@ class AIProvider(ABC):
 
     @abstractmethod
     async def live_caption(
-        self, source_text: str, transcript: str, previous_easy: list[str]
+        self, source_text: str, transcript: str, previous_easy: list[dict[str, str]]
     ) -> dict[str, Any]:
-        """→ {easy_transcript: [str], hard_words: [{word, meaning}]}"""
+        """→ {easy_transcript: [{text, type: content|flow|notice}], hard_words: [{word, meaning}]}"""
 
     @abstractmethod
     async def generate_quiz(self, pages: list[dict[str, Any]], transcripts: list[dict[str, Any]]) -> dict[str, Any]:

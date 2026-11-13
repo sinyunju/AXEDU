@@ -169,19 +169,25 @@ def test_image_errors(response):
 
 def test_live_caption_uses_fast_model_and_previous():
     bodies = []
-    out = {"easy_transcript": ["이전 자막이에요.", "새 자막이에요."], "hard_words": []}
+    prev = [{"text": "이전 자막이에요.", "type": "content"}]
+    out = {"easy_transcript": [*prev, {"text": "지금부터 정리해요.", "type": "flow"}], "hard_words": []}
 
     def handler(req):
         bodies.append(json.loads(req.content))
         return httpx.Response(200, json=completion(json.dumps(out, ensure_ascii=False)))
 
-    result = asyncio.run(text_provider(handler).live_caption("페이지 글", "선생님 발화", ["이전 자막이에요."]))
+    result = asyncio.run(text_provider(handler).live_caption("페이지 글", "선생님 발화", prev))
     assert result == out
     body = bodies[0]
     assert body["model"] == "fast"  # 실시간은 MODEL_FAST
     assert body["response_format"]["json_schema"]["name"] == "live_caption"
     prompt = body["messages"][-1]["content"]
-    assert "- 이전 자막이에요." in prompt and "선생님 발화" in prompt and "페이지 글" in prompt
+    assert '{"text": "이전 자막이에요.", "type": "content"}' in prompt
+    assert "선생님 발화" in prompt and "페이지 글" in prompt
+    item_schema = body["response_format"]["json_schema"]["schema"]["properties"]["easy_transcript"]["items"]
+    assert item_schema["properties"]["type"]["enum"] == ["content", "flow", "notice"]
+    # 단순 이동 멘트 제외, 말하지 않은 내용 금지 지시가 들어 있음
+    assert "다음 장 넘겨 볼까요" in prompt and "아직 말하지 않은 내용" in prompt
 
 
 def test_generate_quiz_request():

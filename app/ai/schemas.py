@@ -64,8 +64,16 @@ RESTRUCTURE_SCHEMA = strict_json_schema(
 )
 
 
+CAPTION_TYPES = ("content", "flow", "notice")
+
+
+class CaptionItemOut(_Strict):
+    text: str
+    type: str = "content"  # 알 수 없는 값은 normalize_captions()에서 content로
+
+
 class LiveCaptionOut(_Strict):
-    easy_transcript: list[str] = Field(default_factory=list)
+    easy_transcript: list[CaptionItemOut] = Field(default_factory=list)
     hard_words: list[HardWordOut] = Field(default_factory=list)
 
 
@@ -74,7 +82,18 @@ LIVE_CAPTION_SCHEMA = strict_json_schema(
     {
         "type": "object",
         "properties": {
-            "easy_transcript": {"type": "array", "items": {"type": "string"}},
+            "easy_transcript": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "type": {"type": "string", "enum": list(CAPTION_TYPES)},
+                    },
+                    "required": ["text", "type"],
+                    "additionalProperties": False,
+                },
+            },
             "hard_words": _HARD_WORDS,
         },
         "required": ["easy_transcript", "hard_words"],

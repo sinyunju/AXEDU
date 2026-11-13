@@ -11,7 +11,7 @@ SAMPLE = Path(__file__).parent.parent / "samples" / "replay_photosynthesis.json"
 
 def test_sample_file_is_valid():
     events = load_events(json.loads(SAMPLE.read_text(encoding="utf-8")))
-    assert len(events) == 16 and {e.page_no for e in events} == {1, 2, 3}
+    assert len(events) == 18 and {e.page_no for e in events} == {1, 2, 3}
     plan = build_plan(events)
     assert [m["page_no"] for _, m in plan if m["type"] == "page_change"] == [2, 3]
 

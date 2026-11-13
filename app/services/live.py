@@ -26,6 +26,28 @@ logger = logging.getLogger(__name__)
 # LLM에 넘기는 누적 발화 최대 길이 (최근 것 우선)
 MAX_TRANSCRIPT_CHARS = 4000
 
+CAPTION_TYPES = ("content", "flow", "notice")
+
+
+def normalize_captions(items: list[Any] | None) -> list[dict[str, str]]:
+    """자막 항목을 [{text, type}]로 통일.
+
+    - 예전 형식(문자열 목록)으로 저장된 자막은 type=content로 읽는다.
+    - 알 수 없는 type은 content, 빈 문장은 버린다.
+    """
+    out: list[dict[str, str]] = []
+    for item in items or []:
+        if isinstance(item, str):
+            text, kind = item, "content"
+        elif isinstance(item, dict):
+            text, kind = str(item.get("text", "")), str(item.get("type", "content"))
+        else:
+            continue
+        text = text.strip()
+        if text:
+            out.append({"text": text, "type": kind if kind in CAPTION_TYPES else "content"})
+    return out
+
 
 class ConnectionManager:
     """lesson_id별 WebSocket 연결 목록 (in-memory)."""
@@ -157,14 +179,14 @@ class LiveCaptioner:
             ).all()
             live = session.get(PageLive, (lesson_id, page_no))
             source_text = page.source_text
-            previous = list(live.easy_transcript) if live else []
+            previous = normalize_captions(live.easy_transcript) if live else []
             previous_words = list(live.hard_words) if live else []
 
         transcript = " ".join(texts)[-MAX_TRANSCRIPT_CHARS:]
         if not transcript.strip():
             return None
         out = await self._provider_getter().live_caption(source_text, transcript, previous)
-        easy = [s.strip() for s in out.get("easy_transcript", []) if s and s.strip()]
+        easy = normalize_captions(out.get("easy_transcript"))
         words = _merge_hard_words(previous_words, out.get("hard_words", []))
         if easy == previous and words == previous_words:
             return None  # 잡담만 있었던 경우 등: 바뀐 게 없으면 저장·전송하지 않음

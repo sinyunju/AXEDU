@@ -43,7 +43,7 @@
   image_suggestion(JSON: {needed: bool, reason, prompt} | null),
   generated_image_path(nullable), approved(bool)
 - **Transcript**: id, lesson_id, page_no, text, created_at  (페이지별 교사 발화 조각)
-- **PageLive**: lesson_id, page_no, easy_transcript(JSON 리스트), updated_at  (실시간 쉬운 자막 결과)
+- **PageLive**: lesson_id, page_no, easy_transcript(JSON: [{text, type}]), hard_words(JSON: [{word, meaning}]), updated_at  (실시간 쉬운 자막 결과. type은 `content | flow | notice`, 6절 참고. hard_words는 재접속 시 복원용)
 - **Quiz**: id, lesson_id, questions(JSON)  (회차당 1개)
 - **QuizAttempt**: id, quiz_id, student_id, answers(JSON), score, submitted_at  (학생별 기록)
 - **ChatMessage**: id, lesson_id, student_id, role(`user | assistant`), content, related_page(nullable), created_at  (학생별·회차별 대화 기록)
@@ -107,7 +107,7 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 
 서버 → 학생 (broadcast)
 - `{"type":"teacher_page","page_no":5}`
-- `{"type":"page_update","page_no":5,"easy_transcript":["...","..."],"hard_words":[...]}`
+- `{"type":"page_update","page_no":5,"easy_transcript":[{"text":"...","type":"content"},{"text":"...","type":"flow"}],"hard_words":[...]}`  (easy_transcript는 그 페이지 자막 전체)
 - `{"type":"lesson_ended"}`
 
 서버 → 교사
@@ -123,7 +123,13 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 - 다음 중 하나가 충족되면 LLM 호출: (a) 마지막 호출 후 15초 경과 + 새 텍스트 있음, (b) page_change 발생(이전 페이지 확정)
 - 같은 페이지에 대해 LLM 호출이 동시에 겹치지 않도록 페이지별 lock
 - LLM 입력: 페이지 source_text + 해당 페이지의 누적 발화 전체 + 직전 easy_transcript
-- LLM 출력(JSON): `{"easy_transcript": ["..."], "hard_words": [{"word":"","meaning":""}]}`
+- LLM 출력(JSON): `{"easy_transcript": [{"text":"...","type":"content"}], "hard_words": [{"word":"","meaning":""}]}`
+- 자막 항목 type
+  - `content`: 수업 내용 설명
+  - `flow`: 수업 흐름 안내 ("지금부터 정리해요", "첫 번째는…", "이제 ○○를 볼 거예요") — 남긴다
+  - `notice`: 과제·준비물 안내
+  - 단순 이동·주목 멘트("다음 장 넘겨 볼까요", "여기 보세요")는 자막에서 뺀다
+- 자막의 모든 문장은 교사가 실제로 한 말에서 나와야 한다. 페이지 글에 있어도 교사가 아직 말하지 않은 내용은 넣지 않는다 (페이지 글은 STT 오타 보정·용어 확인용)
 - 결과를 PageLive에 저장하고 `page_update` broadcast
 
 ## 7. LLM 작업과 프롬프트 규칙 (공통)
@@ -139,7 +145,7 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 1. **페이지 재구성**: source_text → `{easy_sentences[], hard_words[], image_suggestion}`
    - image_suggestion.needed는 추상 개념, 과정·순서, 공간 관계, 여러 요소의 관계처럼 글만으로 이해가 어려운 경우에만 true. 대부분의 페이지는 false
    - prompt는 "글자 없는 단순한 교육용 일러스트"를 기준으로 작성
-2. **실시간 자막**: 6절 참고. 수업과 무관한 발화(출석, 생활지도, 잡담)는 제외
+2. **실시간 자막**: 6절 참고. 수업과 무관한 발화(출석, 생활지도, 잡담)와 단순 이동 멘트는 제외, 수업 흐름 안내는 type=flow로 남김
 3. **퀴즈 생성**: 승인된 페이지 내용 + 교사 발화 → 5문항 내외. 유형은 OX와 3지선다만. 각 문항에 page_no, 정답, 쉬운 해설 포함
 4. **챗봇**: 해당 회차의 페이지 내용과 교사 발화를 우선 근거로 답변. 질문을 넷으로 나눠 처리한다.
    - 수업 내용으로 답할 수 있는 질문 → 수업 내용으로 답하고 근거 page_no 반환

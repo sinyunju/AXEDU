@@ -100,7 +100,7 @@ def _summarize(msg: dict[str, Any]) -> str:
     if msg.get("type") == "page_update":
         lines = msg.get("easy_transcript") or []
         words = ", ".join(w["word"] for w in msg.get("hard_words") or [])
-        last = lines[-1] if lines else ""
+        last = f"[{lines[-1]['type']}] {lines[-1]['text']}" if lines else ""
         return f"page_update {msg['page_no']}쪽 자막 {len(lines)}줄 · 최근: {last}" + (f" · 낱말: {words}" if words else "")
     if msg.get("type") == "ack":
         return ""  # 너무 많아서 생략
