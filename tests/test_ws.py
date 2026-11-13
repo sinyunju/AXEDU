@@ -359,3 +359,23 @@ def test_init_db_adds_missing_column(tmp_path):
         live = s.get(PageLive, (1, 1))
         assert live.easy_transcript == ["a"] and live.hard_words == []
     engine.dispose()
+
+
+def test_unchanged_caption_is_not_broadcast(session, lesson_with_page):
+    lid = lesson_with_page
+    manager = FakeManager()
+
+    class Chatter(MockProvider):  # 수업 내용이 없는 발화 → 이전 자막 그대로
+        async def live_caption(self, source_text, transcript, previous_easy):
+            return {"easy_transcript": list(previous_easy), "hard_words": []}
+
+    cap = LiveCaptioner(manager, interval=0, provider_getter=lambda: Chatter(), clock=FakeClock())
+
+    async def scenario():
+        add_transcript(session, lid, "출석 부를게요")
+        cap.on_transcript(lid, 1)
+        await cap.wait_idle()
+
+    asyncio.run(scenario())
+    assert manager.sent == []
+    assert session.get(PageLive, (lid, 1)) is None
