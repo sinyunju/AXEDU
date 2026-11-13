@@ -64,7 +64,9 @@ async def run_generation(lesson_id: int, provider: AIProvider, concurrency: int 
     finally:
         with Session(get_engine()) as session:
             lesson = session.get(Lesson, lesson_id)
-            if lesson is not None and lesson.status == LessonStatus.generating:
+            # ready도 포함: 같은 DB를 쓰는 다른 프로세스가 시작하면서 recover_stuck_generations()로
+            # 진행 중인 회차를 먼저 ready로 바꿨을 수 있다. 그래도 끝난 작업의 진행률은 100으로 맞춘다.
+            if lesson is not None and lesson.status in (LessonStatus.generating, LessonStatus.ready):
                 lesson.status = LessonStatus.ready
                 lesson.progress = 100
                 session.add(lesson)

@@ -210,3 +210,28 @@ class AttemptOut(BaseModel):
     total: int
     submitted_at: datetime
     results: list[AttemptResultItem]
+
+
+# ---------- 9단계: 챗봇 ----------
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=500, examples=["광합성은 어디에서 일어나요?"])
+
+    @field_validator("message")
+    @classmethod
+    def _not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("질문을 입력해 주세요")
+        return v.strip()
+
+
+class ChatMessageOut(BaseModel):
+    id: int
+    role: str = Field(description='"user" | "assistant"')
+    content: str
+    related_page: int | None = Field(description="답변의 근거 페이지 (assistant만)")
+    created_at: datetime
+
+
+class ChatExchange(BaseModel):
+    question: ChatMessageOut
+    answer: ChatMessageOut

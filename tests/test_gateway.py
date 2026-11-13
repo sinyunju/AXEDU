@@ -202,3 +202,29 @@ def test_generate_quiz_request():
     prompt = body["messages"][-1]["content"]
     assert "[1쪽]" in prompt and "식물은 햇빛으로" in prompt and "광합성(양분 만들기)" in prompt
     assert "선생님 말씀: 잎에서 일어나요" in prompt
+
+
+def test_chat_request_and_zero_page():
+    bodies = []
+
+    def handler(req):
+        bodies.append(json.loads(req.content))
+        return httpx.Response(200, json=completion(json.dumps(
+            {"kind": "off_topic", "answer": " 이건 오늘 수업과 다른 이야기예요. 수업 내용을 물어봐 줄래요? ",
+             "related_page": 0}, ensure_ascii=False)))
+
+    pages = [{"page_no": 1, "easy_sentences": ["식물은 햇빛으로 양분을 만들어요."], "hard_words": []}]
+    history = [{"role": "user", "content": "광합성이 뭐야"}, {"role": "assistant", "content": "양분 만들기예요."}]
+    result = asyncio.run(text_provider(handler).chat(pages, [], history, "축구 좋아해?"))
+    assert result == {"kind": "off_topic", "answer": "이건 오늘 수업과 다른 이야기예요. 수업 내용을 물어봐 줄래요?",
+                      "related_page": None}  # 0 → None
+    body = bodies[0]
+    assert body["model"] == "main" and body["response_format"]["json_schema"]["name"] == "lesson_chat"
+    schema = body["response_format"]["json_schema"]["schema"]
+    assert schema["properties"]["kind"]["enum"] == ["lesson", "basic", "not_covered", "off_topic", "care"]
+    prompt = body["messages"][-1]["content"]
+    assert "학생: 광합성이 뭐야" in prompt and "도우미: 양분 만들기예요." in prompt
+    assert "축구 좋아해?" in prompt and "식물은 햇빛으로" in prompt
+    # 두 가지 거절 문구가 모두 지시에 들어가고, 챗봇용 공통 규칙(기초 지식 허용)을 씀
+    assert "이건 오늘 수업과 다른 이야기예요." in prompt and "오늘 수업에서는 거기까지 나오지 않았어요." in prompt
+    assert "교과서에 나오는 확실한 기본 지식" in body["messages"][0]["content"]

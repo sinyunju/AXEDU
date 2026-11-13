@@ -60,8 +60,10 @@ def test_mock_provider_shapes(tmp_env):
     assert set(live) == {"easy_transcript", "hard_words"} and live["easy_transcript"]
     quiz = asyncio.run(p.generate_quiz([{"page_no": 1}], []))
     assert all(q["type"] in ("ox", "choice") for q in quiz["questions"])
-    chat = asyncio.run(p.chat([{"page_no": 2}], [], [], "질문"))
-    assert chat["related_page"] == 2
+    pages = [{"page_no": 2, "easy_sentences": ["광합성은 잎에서 일어나요."]}]
+    assert asyncio.run(p.chat(pages, [], [], "광합성이 뭐예요?"))["related_page"] == 2
+    off = asyncio.run(p.chat(pages, [], [], "축구 좋아해?"))
+    assert off["related_page"] is None and off["answer"].startswith("이건 오늘 수업과 다른 이야기예요")
     from app.ai import get_image_provider
 
     assert asyncio.run(get_image_provider().generate_image("x")).startswith(b"\x89PNG")
