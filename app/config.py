@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     # 쉼표 구분 문자열. 예: "http://localhost:3000,https://xxx.vercel.app"
     frontend_origins: str = "http://localhost:3000,http://localhost:5173"
 
+    # PDF 업로드
+    max_upload_mb: int = 30
+    max_pdf_pages: int = 100
+    pdf_render_zoom: float = 1.5  # 72dpi 기준 배율 (1.5 → 108dpi)
+
     jwt_secret: str = "change-me"
     jwt_expire_minutes: int = 720
 

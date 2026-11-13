@@ -8,3 +8,14 @@ def make_user(client, login_id: str, role: str, name: str = "이름", password: 
     assert r.status_code == 201, r.text
     token = client.post("/auth/login", json={"login_id": login_id, "password": password}).json()["access_token"]
     return {"id": r.json()["id"], "headers": bearer(token)}
+
+
+def make_pdf(pages: list[str]) -> bytes:
+    """페이지별 텍스트로 테스트용 PDF 생성 (한글 포함)."""
+    import pymupdf
+
+    doc = pymupdf.open()
+    for text in pages:
+        page = doc.new_page()
+        page.insert_text((72, 72), text, fontname="korea", fontsize=14)
+    return doc.tobytes()
