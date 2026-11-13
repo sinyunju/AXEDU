@@ -81,3 +81,46 @@ LIVE_CAPTION_SCHEMA = strict_json_schema(
         "additionalProperties": False,
     },
 )
+
+
+class QuizQuestionRaw(_Strict):
+    """LLM이 만든 문항 (검증·정규화 전). 의미 검증은 app/services/quiz.py에서."""
+
+    type: str
+    question: str
+    choices: list[str] = Field(default_factory=list)
+    answer: str
+    explanation: str = ""
+    page_no: int | None = None
+
+
+class QuizOutRaw(_Strict):
+    questions: list[QuizQuestionRaw] = Field(min_length=1)
+
+
+QUIZ_SCHEMA = strict_json_schema(
+    "lesson_quiz",
+    {
+        "type": "object",
+        "properties": {
+            "questions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "type": {"type": "string", "enum": ["ox", "choice"]},
+                        "question": {"type": "string"},
+                        "choices": {"type": "array", "items": {"type": "string"}},
+                        "answer": {"type": "string"},
+                        "explanation": {"type": "string"},
+                        "page_no": {"type": "integer"},
+                    },
+                    "required": ["type", "question", "choices", "answer", "explanation", "page_no"],
+                    "additionalProperties": False,
+                },
+            }
+        },
+        "required": ["questions"],
+        "additionalProperties": False,
+    },
+)

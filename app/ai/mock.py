@@ -41,26 +41,21 @@ class MockProvider(AIProvider):
         return {"easy_transcript": [*previous_easy, *new], "hard_words": []}
 
     async def generate_quiz(self, pages: list[dict[str, Any]], transcripts: list[dict[str, Any]]) -> dict[str, Any]:
-        first_page = pages[0]["page_no"] if pages else 1
+        page_nos = [p["page_no"] for p in pages] or [1]
+        bank = [
+            ("ox", "식물은 햇빛으로 양분을 만들어요.", ["O", "X"], "O", "맞아요. 이것을 광합성이라고 해요."),
+            ("choice", "광합성에 꼭 필요한 것은 무엇일까요?", ["햇빛", "소금", "모래"], "햇빛",
+             "식물은 햇빛이 있어야 양분을 만들어요."),
+            ("ox", "광합성은 뿌리에서 일어나요.", ["O", "X"], "X", "광합성은 잎의 엽록체에서 일어나요."),
+            ("choice", "광합성이 일어나는 곳은 어디일까요?", ["엽록체", "뿌리털", "꽃잎"], "엽록체",
+             "엽록체는 잎 속 초록 알갱이예요."),
+            ("ox", "광합성에는 물이 필요해요.", ["O", "X"], "O", "식물은 물과 이산화탄소로 양분을 만들어요."),
+        ]
         return {
             "questions": [
-                {
-                    "id": 1,
-                    "type": "ox",
-                    "question": "식물은 햇빛으로 양분을 만들어요.",
-                    "answer": "O",
-                    "explanation": "맞아요. 이것을 광합성이라고 해요.",
-                    "page_no": first_page,
-                },
-                {
-                    "id": 2,
-                    "type": "choice",
-                    "question": "광합성에 꼭 필요한 것은 무엇일까요?",
-                    "choices": ["햇빛", "소금", "모래"],
-                    "answer": "햇빛",
-                    "explanation": "식물은 햇빛이 있어야 양분을 만들어요.",
-                    "page_no": first_page,
-                },
+                {"type": t, "question": q, "choices": c, "answer": a, "explanation": e,
+                 "page_no": page_nos[i % len(page_nos)]}
+                for i, (t, q, c, a, e) in enumerate(bank)
             ]
         }
 

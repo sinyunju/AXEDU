@@ -182,3 +182,23 @@ def test_live_caption_uses_fast_model_and_previous():
     assert body["response_format"]["json_schema"]["name"] == "live_caption"
     prompt = body["messages"][-1]["content"]
     assert "- 이전 자막이에요." in prompt and "선생님 발화" in prompt and "페이지 글" in prompt
+
+
+def test_generate_quiz_request():
+    bodies = []
+    out = {"questions": [{"type": "ox", "question": "q", "choices": ["O", "X"], "answer": "O",
+                          "explanation": "e", "page_no": 1}]}
+
+    def handler(req):
+        bodies.append(json.loads(req.content))
+        return httpx.Response(200, json=completion(json.dumps(out)))
+
+    pages = [{"page_no": 1, "easy_sentences": ["식물은 햇빛으로 양분을 만들어요."],
+              "hard_words": [{"word": "광합성", "meaning": "양분 만들기"}], "source_text": "원문"}]
+    result = asyncio.run(text_provider(handler).generate_quiz(pages, [{"page_no": 1, "text": "잎에서 일어나요"}]))
+    assert result["questions"][0]["answer"] == "O"
+    body = bodies[0]
+    assert body["model"] == "main" and body["response_format"]["json_schema"]["name"] == "lesson_quiz"
+    prompt = body["messages"][-1]["content"]
+    assert "[1쪽]" in prompt and "식물은 햇빛으로" in prompt and "광합성(양분 만들기)" in prompt
+    assert "선생님 말씀: 잎에서 일어나요" in prompt
