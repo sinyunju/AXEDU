@@ -2,7 +2,7 @@ import os
 
 # 테스트는 항상 MOCK_AI + 임시 DB로 실행 (app import 전에 설정)
 os.environ["MOCK_AI"] = "true"
-os.environ.setdefault("JWT_SECRET", "test-secret")
+os.environ["JWT_SECRET"] = "test-secret-at-least-32-bytes-long-xxxxxxxx"
 
 import pytest
 from fastapi.testclient import TestClient
