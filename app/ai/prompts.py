@@ -91,3 +91,51 @@ def live_caption_messages(source_text: str, transcript: str, previous_easy: list
         .replace("{transcript}", transcript.strip())
     )
     return [{"role": "system", "content": COMMON_RULES}, {"role": "user", "content": content}]
+
+
+QUIZ_TASK = """\
+수업이 끝났어. 아래 수업 내용으로 학생이 이해했는지 확인하는 문제를 만들어 줘.
+
+출력 JSON 형식:
+{
+  "questions": [
+    {"type": "ox", "question": "문제", "choices": ["O", "X"], "answer": "O 또는 X", "explanation": "해설", "page_no": 1},
+    {"type": "choice", "question": "문제", "choices": ["보기1", "보기2", "보기3"], "answer": "정답 보기와 똑같은 글", "explanation": "해설", "page_no": 2}
+  ]
+}
+
+만드는 방법:
+- 5문항 안팎. 유형은 OX("ox")와 3지선다("choice")만. 두 유형을 섞는다.
+- 수업의 핵심 내용만 묻는다. 아래 수업 내용에 없는 것은 묻지 않는다.
+- 같은 내용을 다시 묻지 않는다. 한 사실을 OX로 물었다면, 그 사실을 반대로 묻거나 다른 유형으로 또 묻지 않는다.
+- 페이지별 핵심을 고르게 묻는다. 내용이 있는 페이지는 되도록 한 문항 이상 다루고, 한 페이지에 문항이 몰리지 않게 한다.
+- 문제는 짧고 분명하게 쓴다. "~이 아닌 것은?", "옳지 않은 것은?" 같은 부정형 질문과 함정 문제는 만들지 않는다.
+- ox: choices는 ["O", "X"], answer는 "O" 또는 "X". O와 X 정답이 한쪽으로 몰리지 않게 한다.
+- choice: 보기는 정확히 3개. 짧게 쓰고, 정답은 하나만. answer는 정답 보기 글자와 똑같이 쓴다.
+  오답 보기는 같은 수업에 나온 다른 낱말이나 그럴듯한 말로 하되, 학생이 헷갈려서 틀리게 만들려고 꼬지 않는다.
+- explanation: 왜 그게 정답인지 1~2문장으로 쉽게 쓴다.
+- page_no: 그 문제의 근거가 되는 페이지 번호.
+
+수업 내용 (페이지별 쉬운 문장과 선생님 말씀):
+{content}"""
+
+
+def quiz_messages(pages: list[dict], transcripts: list[dict]) -> list[dict[str, str]]:
+    talk: dict[int, list[str]] = {}
+    for t in transcripts:
+        talk.setdefault(t["page_no"], []).append(t["text"])
+    blocks = []
+    for p in pages:
+        lines = [f"[{p['page_no']}쪽]"]
+        lines += [f"- {s}" for s in p.get("easy_sentences") or []]
+        if not p.get("easy_sentences") and p.get("source_text"):
+            lines.append(f"(원문) {p['source_text'][:1500]}")
+        words = ", ".join(f"{w['word']}({w['meaning']})" for w in p.get("hard_words") or [])
+        if words:
+            lines.append(f"어려운 낱말: {words}")
+        if p["page_no"] in talk:
+            lines.append(f"선생님 말씀: {' '.join(talk[p['page_no']])[:1500]}")
+        blocks.append("\n".join(lines))
+    content = "\n\n".join(blocks)
+    return [{"role": "system", "content": COMMON_RULES},
+            {"role": "user", "content": QUIZ_TASK.replace("{content}", content)}]

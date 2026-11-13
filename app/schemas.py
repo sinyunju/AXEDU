@@ -166,3 +166,47 @@ class PageView(BaseModel):
     easy_transcript: list[str] = Field(description="이 페이지에서 지금까지 나온 선생님 말씀의 쉬운 자막")
     transcript_hard_words: list[HardWord] = Field(description="실시간 자막에서 나온 어려운 낱말")
     transcript_updated_at: datetime | None
+
+
+# ---------- 8단계: 퀴즈 ----------
+class QuizQuestionOut(BaseModel):
+    id: int
+    type: str = Field(description='"ox" | "choice"')
+    question: str
+    choices: list[str] = Field(description='ox는 ["O", "X"], choice는 보기 3개')
+    page_no: int | None = Field(description="근거 페이지")
+    answer: str | None = Field(None, description="교사에게만 제공 (학생은 제출 후 결과에서 확인)")
+    explanation: str | None = Field(None, description="교사에게만 제공")
+
+
+class QuizOut(BaseModel):
+    id: int
+    lesson_id: int
+    questions: list[QuizQuestionOut]
+
+
+class AttemptAnswer(BaseModel):
+    question_id: int
+    answer: str = Field(max_length=200, examples=["O"], description='ox는 "O"/"X", choice는 보기 글 그대로')
+
+
+class AttemptCreate(BaseModel):
+    answers: list[AttemptAnswer] = Field(description="답하지 않은 문항은 오답 처리")
+
+
+class AttemptResultItem(BaseModel):
+    question_id: int
+    answer: str | None
+    correct: bool
+    correct_answer: str
+    explanation: str
+    page_no: int | None
+
+
+class AttemptOut(BaseModel):
+    id: int
+    quiz_id: int
+    score: int
+    total: int
+    submitted_at: datetime
+    results: list[AttemptResultItem]

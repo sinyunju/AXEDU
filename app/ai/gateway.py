@@ -14,8 +14,10 @@ from openai import APIError, AsyncOpenAI, BadRequestError
 from pydantic import BaseModel, ValidationError
 
 from app.ai.base import AIError, AIProvider, ImageProvider, image_extension
-from app.ai.prompts import IMAGE_STYLE_SUFFIX, live_caption_messages, restructure_messages
-from app.ai.schemas import LIVE_CAPTION_SCHEMA, RESTRUCTURE_SCHEMA, LiveCaptionOut, RestructureOut
+from app.ai.prompts import IMAGE_STYLE_SUFFIX, live_caption_messages, quiz_messages, restructure_messages
+from app.ai.schemas import (
+    LIVE_CAPTION_SCHEMA, QUIZ_SCHEMA, RESTRUCTURE_SCHEMA, LiveCaptionOut, QuizOutRaw, RestructureOut,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +98,7 @@ class GatewayTextProvider(AIProvider):
                                      LIVE_CAPTION_SCHEMA, LiveCaptionOut)
 
     async def generate_quiz(self, pages, transcripts) -> dict[str, Any]:
-        raise NotImplementedError("8단계에서 구현")
+        return await self._json_call(self.model_main, quiz_messages(pages, transcripts), QUIZ_SCHEMA, QuizOutRaw)
 
     async def chat(self, pages, transcripts, history, message) -> dict[str, Any]:
         raise NotImplementedError("9단계에서 구현")
