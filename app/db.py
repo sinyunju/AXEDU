@@ -5,7 +5,7 @@
 """
 from collections.abc import Iterator
 
-from sqlalchemy import Engine
+from sqlalchemy import Engine, inspect, text
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import get_settings
@@ -25,10 +25,29 @@ def get_engine() -> Engine:
     return _engine
 
 
+# create_all은 기존 테이블에 컬럼을 추가하지 않는다. 마이그레이션 도구 대신 해커톤용으로 필요한 컬럼만 추가.
+# (table, column, SQL 타입·기본값)
+_ADDED_COLUMNS = [
+    ("pagelive", "hard_words", "JSON NOT NULL DEFAULT '[]'"),
+]
+
+
+def _add_missing_columns(engine: Engine) -> None:
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table, column, ddl in _ADDED_COLUMNS:
+            if not inspector.has_table(table):
+                continue
+            if column not in {c["name"] for c in inspector.get_columns(table)}:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
+
+
 def init_db(engine: Engine | None = None) -> None:
     from app import models  # noqa: F401  (테이블 등록)
 
-    SQLModel.metadata.create_all(engine or get_engine())
+    engine = engine or get_engine()
+    SQLModel.metadata.create_all(engine)
+    _add_missing_columns(engine)
 
 
 def get_session() -> Iterator[Session]:

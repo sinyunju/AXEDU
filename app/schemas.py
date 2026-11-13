@@ -164,4 +164,5 @@ class PageView(BaseModel):
     hard_words: list[HardWord]
     generated_image_url: str | None
     easy_transcript: list[str] = Field(description="이 페이지에서 지금까지 나온 선생님 말씀의 쉬운 자막")
+    transcript_hard_words: list[HardWord] = Field(description="실시간 자막에서 나온 어려운 낱말")
     transcript_updated_at: datetime | None

@@ -2,7 +2,7 @@ from datetime import date
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, func, select
 
@@ -287,11 +287,12 @@ def approve_lesson(
     response_model=LessonOut,
     summary="실시간 수업 시작 (교사)",
     description="approved → live (선생님 페이지는 1쪽부터). ended → live는 수업 재개로 보고 페이지를 유지한다. "
-                "이미 live면 그대로 반환.",
+                "이미 live면 그대로 반환. WebSocket으로 lesson_started를 보낸다.",
     responses={409: {"description": "승인 전 회차"}},
 )
-def start_lesson(
-    lesson_id: int, session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+async def start_lesson(
+    lesson_id: int, request: Request,
+    session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
 ) -> LessonOut:
     lesson = get_owned_lesson(session, lesson_id, teacher)
     if lesson.status == LessonStatus.live:
@@ -304,6 +305,8 @@ def start_lesson(
     session.add(lesson)
     session.commit()
     session.refresh(lesson)
+    await request.app.state.live.connections.broadcast(
+        lesson.id, {"type": "lesson_started", "page_no": lesson.current_page})
     return lesson_out(session, lesson)
 
 
@@ -311,11 +314,12 @@ def start_lesson(
     "/lessons/{lesson_id}/end",
     response_model=LessonOut,
     summary="수업 종료 (교사)",
-    description="live → ended. 이미 ended면 그대로 반환. (7단계에서 학생들에게 lesson_ended 알림 추가)",
+    description="live → ended. 이미 ended면 그대로 반환. WebSocket으로 lesson_ended를 보낸다.",
     responses={409: {"description": "진행 중인 수업이 아님"}},
 )
-def end_lesson(
-    lesson_id: int, session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+async def end_lesson(
+    lesson_id: int, request: Request,
+    session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
 ) -> LessonOut:
     lesson = get_owned_lesson(session, lesson_id, teacher)
     if lesson.status == LessonStatus.ended:
@@ -326,6 +330,9 @@ def end_lesson(
     session.add(lesson)
     session.commit()
     session.refresh(lesson)
+    hub = request.app.state.live
+    hub.captioner.flush_lesson(lesson.id)  # 남은 발화는 마지막으로 자막 처리 (결과는 page_update로 뒤따라옴)
+    await hub.connections.broadcast(lesson.id, {"type": "lesson_ended"})
     return lesson_out(session, lesson)
 
 
@@ -355,5 +362,6 @@ def get_page_view(
         hard_words=out.hard_words,
         generated_image_url=out.generated_image_url,
         easy_transcript=live.easy_transcript if live else [],
+        transcript_hard_words=live.hard_words if live else [],
         transcript_updated_at=live.updated_at if live else None,
     )

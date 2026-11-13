@@ -50,3 +50,44 @@ IMAGE_STYLE_SUFFIX = (
     "\n\n스타일: 글자·숫자·라벨이 전혀 없는 단순한 교육용 일러스트. "
     "흰 배경, 부드러운 색, 굵은 윤곽선, 핵심 대상만 크게."
 )
+
+
+LIVE_CAPTION_TASK = """\
+지금 수업 중이야. 선생님이 아래 페이지를 설명하면서 한 말을 학생 화면에 쉬운 자막으로 보여 줄 거야.
+
+출력 JSON 형식:
+{
+  "easy_transcript": ["쉬운 자막 문장", ...],
+  "hard_words": [{"word": "핵심 용어", "meaning": "쉬운 뜻"}]
+}
+
+작성 방법:
+- easy_transcript는 이 페이지의 자막 전체 목록이야. "이전 자막"을 앞부분에 그대로 두고, 새로 말한 내용만 뒤에 덧붙인다.
+  학생이 이미 읽은 문장이니 이전 자막은 틀린 내용이 아니면 고치지 않는다.
+- 선생님 말씀의 수업 내용만 쓴다. 출석, 생활지도, 잡담, "자 다음", "음" 같은 말은 뺀다. 새로 덧붙일 수업 내용이 없으면 이전 자막을 그대로 돌려준다.
+- 말을 그대로 받아 적지 말고, 뜻을 살려 쉬운 문장으로 정리한다. 말하는 도중 끊긴 부분은 앞뒤 맥락이 분명할 때만 이어서 쓴다.
+- 페이지 글은 선생님 말을 이해하기 위한 참고용이야. 선생님이 말하지 않은 페이지 내용을 자막에 넣지 않는다.
+- hard_words: 선생님 말씀에 나온 핵심 용어 중 학생이 모를 만한 것만(0~3개).
+
+페이지 글(참고용):
+\"\"\"
+{source_text}
+\"\"\"
+
+이전 자막:
+{previous}
+
+선생님이 이 페이지에서 지금까지 한 말(음성 인식 결과라 오타가 있을 수 있음):
+\"\"\"
+{transcript}
+\"\"\""""
+
+
+def live_caption_messages(source_text: str, transcript: str, previous_easy: list[str]) -> list[dict[str, str]]:
+    previous = "\n".join(f"- {s}" for s in previous_easy) if previous_easy else "(없음)"
+    content = (
+        LIVE_CAPTION_TASK.replace("{source_text}", source_text.strip() or "(글 없음)")
+        .replace("{previous}", previous)
+        .replace("{transcript}", transcript.strip())
+    )
+    return [{"role": "system", "content": COMMON_RULES}, {"role": "user", "content": content}]

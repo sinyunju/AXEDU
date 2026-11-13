@@ -165,3 +165,20 @@ def test_image_http_url_is_downloaded_without_api_key():
 def test_image_errors(response):
     with pytest.raises(AIError):
         asyncio.run(image_provider(lambda req: response).generate_image("x"))
+
+
+def test_live_caption_uses_fast_model_and_previous():
+    bodies = []
+    out = {"easy_transcript": ["이전 자막이에요.", "새 자막이에요."], "hard_words": []}
+
+    def handler(req):
+        bodies.append(json.loads(req.content))
+        return httpx.Response(200, json=completion(json.dumps(out, ensure_ascii=False)))
+
+    result = asyncio.run(text_provider(handler).live_caption("페이지 글", "선생님 발화", ["이전 자막이에요."]))
+    assert result == out
+    body = bodies[0]
+    assert body["model"] == "fast"  # 실시간은 MODEL_FAST
+    assert body["response_format"]["json_schema"]["name"] == "live_caption"
+    prompt = body["messages"][-1]["content"]
+    assert "- 이전 자막이에요." in prompt and "선생님 발화" in prompt and "페이지 글" in prompt
