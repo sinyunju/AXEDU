@@ -1,18 +1,28 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, func, select
 
+from app.ai import AIError, AIProvider, ImageProvider, get_ai_provider, get_image_provider
+from app.ai.base import image_extension
 from app.config import get_settings
 from app.db import get_session
 from app.deps import get_current_user, require_teacher
-from app.models import Lesson, Page, Role, User
+from app.models import Lesson, LessonStatus, Page, Role, User
 from app.pdf import PdfError, remove_files, render_pdf
-from app.permissions import get_accessible_lesson, get_owned_course
-from app.schemas import LessonDetail, PageOut
+from app.permissions import get_accessible_lesson, get_owned_course, get_owned_lesson
+from app.schemas import ImageRequest, LessonDetail, LessonOut, PageOut, PageUpdate
+from app.services.generation import run_generation
+from app.storage import GENERATED_SUBDIR, delete_file, save_file
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["lessons"])
+
+# 승인 이후(approved/live/ended)에는 재생성 불가
+_REGENERATABLE = (LessonStatus.uploaded, LessonStatus.ready)
 
 
 def file_url(rel_path: str | None) -> str | None:
@@ -34,8 +44,17 @@ def page_out(page: Page, viewer: User) -> PageOut:
     )
 
 
+def _pages(session: Session, lesson_id: int) -> list[Page]:
+    return list(session.exec(select(Page).where(Page.lesson_id == lesson_id).order_by(Page.page_no)).all())
+
+
+def lesson_out(session: Session, lesson: Lesson) -> LessonOut:
+    count = session.exec(select(func.count()).select_from(Page).where(Page.lesson_id == lesson.id)).one()
+    return LessonOut(**lesson.model_dump(), page_count=count)
+
+
 def lesson_detail(session: Session, lesson: Lesson, viewer: User) -> LessonDetail:
-    pages = session.exec(select(Page).where(Page.lesson_id == lesson.id).order_by(Page.page_no)).all()
+    pages = _pages(session, lesson.id)
     return LessonDetail(
         **lesson.model_dump(),
         page_count=len(pages),
@@ -113,3 +132,150 @@ def get_lesson(
 ) -> LessonDetail:
     lesson = get_accessible_lesson(session, lesson_id, user)
     return lesson_detail(session, lesson, user)
+
+
+# ---------- 5단계: 재구성 / 수정 / 이미지 / 승인 (교사) ----------
+def _get_page(session: Session, lesson: Lesson, page_no: int) -> Page:
+    page = session.exec(select(Page).where(Page.lesson_id == lesson.id, Page.page_no == page_no)).first()
+    if page is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "페이지를 찾을 수 없습니다")
+    return page
+
+
+def _ensure_not_generating(lesson: Lesson) -> None:
+    if lesson.status == LessonStatus.generating:
+        raise HTTPException(status.HTTP_409_CONFLICT, "재구성 작업 중입니다. 끝난 뒤 다시 시도해 주세요")
+
+
+@router.post(
+    "/lessons/{lesson_id}/generate",
+    response_model=LessonOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="페이지별 쉬운 문장 재구성 시작 (교사)",
+    description="백그라운드로 실행된다. 진행률은 GET /lessons/{id} 의 progress(0~100)와 status(generating → ready)로 확인.",
+    responses={409: {"description": "이미 진행 중이거나 승인 이후 회차"}},
+)
+def generate_lesson(
+    lesson_id: int,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    teacher: User = Depends(require_teacher),
+    provider: AIProvider = Depends(get_ai_provider),
+) -> LessonOut:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    _ensure_not_generating(lesson)
+    if lesson.status not in _REGENERATABLE:
+        raise HTTPException(status.HTTP_409_CONFLICT, "승인된 회차는 다시 생성할 수 없습니다")
+    lesson.status = LessonStatus.generating
+    lesson.progress = 0
+    session.add(lesson)
+    session.commit()
+    session.refresh(lesson)
+    background_tasks.add_task(run_generation, lesson.id, provider, get_settings().generate_concurrency)
+    return lesson_out(session, lesson)
+
+
+@router.put("/lessons/{lesson_id}/pages/{page_no}", response_model=PageOut, summary="쉬운 문장·어려운 낱말 수정 (교사)")
+def update_page(
+    lesson_id: int, page_no: int, body: PageUpdate,
+    session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+) -> PageOut:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    _ensure_not_generating(lesson)
+    page = _get_page(session, lesson, page_no)
+    if body.easy_sentences is None and body.hard_words is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "easy_sentences 또는 hard_words 중 하나는 보내야 합니다")
+    if body.easy_sentences is not None:
+        page.easy_sentences = body.easy_sentences
+    if body.hard_words is not None:
+        page.hard_words = [w.model_dump() for w in body.hard_words]
+    session.add(page)
+    session.commit()
+    session.refresh(page)
+    return page_out(page, teacher)
+
+
+@router.post(
+    "/lessons/{lesson_id}/pages/{page_no}/image",
+    response_model=PageOut,
+    summary="페이지 이미지 생성 (교사)",
+    description="prompt를 비우면 AI 제안(image_suggestion.prompt)을 사용. 기존 생성 이미지는 교체된다. "
+                "MOCK_IMAGE=true면 실제 호출 없이 자리표시 이미지를 만든다.",
+    responses={400: {"description": "사용할 프롬프트가 없음"}, 502: {"description": "이미지 생성 API 실패"}},
+)
+async def generate_page_image(
+    lesson_id: int, page_no: int, body: ImageRequest | None = None,
+    session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+    image_provider: ImageProvider = Depends(get_image_provider),
+) -> PageOut:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    _ensure_not_generating(lesson)
+    page = _get_page(session, lesson, page_no)
+
+    custom_prompt = (body.prompt or "").strip() if body else ""
+    suggestion = page.image_suggestion or {}
+    prompt = custom_prompt or (suggestion.get("prompt") or "").strip()
+    if not prompt:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "AI 제안 프롬프트가 없습니다. prompt를 직접 입력해 주세요")
+
+    try:
+        image = await image_provider.generate_image(prompt)
+    except AIError as e:
+        logger.warning("이미지 생성 실패 lesson=%s page=%s: %s", lesson_id, page_no, e)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "이미지를 만들지 못했습니다. 잠시 후 다시 시도해 주세요")
+    ext = image_extension(image) or "png"
+
+    old_path = page.generated_image_path
+    page.generated_image_path = save_file(GENERATED_SUBDIR, image, ext)
+    page.image_suggestion = {
+        "needed": True,
+        "reason": suggestion.get("reason") or ("교사가 직접 요청" if custom_prompt else ""),
+        "prompt": prompt,
+    }
+    session.add(page)
+    session.commit()
+    session.refresh(page)
+    delete_file(old_path)
+    return page_out(page, teacher)
+
+
+@router.delete("/lessons/{lesson_id}/pages/{page_no}/image", response_model=PageOut, summary="이미지·이미지 제안 삭제 (교사)")
+def delete_page_image(
+    lesson_id: int, page_no: int,
+    session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+) -> PageOut:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    _ensure_not_generating(lesson)
+    page = _get_page(session, lesson, page_no)
+    old_path = page.generated_image_path
+    page.generated_image_path = None
+    page.image_suggestion = None
+    session.add(page)
+    session.commit()
+    session.refresh(page)
+    delete_file(old_path)
+    return page_out(page, teacher)
+
+
+@router.post(
+    "/lessons/{lesson_id}/approve",
+    response_model=LessonDetail,
+    summary="회차 승인 → 학생에게 공개 (교사)",
+    responses={409: {"description": "재구성 전/중이거나 이미 수업이 시작된 회차"}},
+)
+def approve_lesson(
+    lesson_id: int, session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+) -> LessonDetail:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    if lesson.status in (LessonStatus.uploaded, LessonStatus.generating):
+        raise HTTPException(status.HTTP_409_CONFLICT, "재구성을 마친 뒤 승인할 수 있습니다")
+    if lesson.status in (LessonStatus.live, LessonStatus.ended):
+        raise HTTPException(status.HTTP_409_CONFLICT, "이미 수업이 시작된 회차입니다")
+    for page in _pages(session, lesson.id):
+        page.approved = True
+        session.add(page)
+    lesson.status = LessonStatus.approved
+    session.add(lesson)
+    session.commit()
+    session.refresh(lesson)
+    return lesson_detail(session, lesson, teacher)
