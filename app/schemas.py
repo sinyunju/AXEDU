@@ -125,3 +125,26 @@ class LessonOut(BaseModel):
 
 class LessonDetail(LessonOut):
     pages: list[PageOut]
+
+
+# ---------- 5단계: 재구성 / 수정 / 이미지 ----------
+class PageUpdate(BaseModel):
+    easy_sentences: list[str] | None = Field(None, examples=[["식물은 햇빛으로 양분을 만들어요."]])
+    hard_words: list[HardWord] | None = None
+
+    @field_validator("easy_sentences")
+    @classmethod
+    def _clean_sentences(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return v
+        cleaned = [s.strip() for s in v if s.strip()]
+        if any(len(s) > 500 for s in cleaned):
+            raise ValueError("문장은 500자 이하여야 합니다")
+        return cleaned
+
+
+class ImageRequest(BaseModel):
+    prompt: str | None = Field(
+        None, max_length=1000, description="비우면 AI가 제안한 image_suggestion.prompt를 사용",
+        examples=["잎에 햇빛이 비치고 뿌리로 물이 올라가는 모습"],
+    )

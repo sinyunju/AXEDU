@@ -2,6 +2,7 @@ import os
 
 # 테스트는 항상 MOCK_AI + 임시 DB로 실행 (app import 전에 설정)
 os.environ["MOCK_AI"] = "true"
+os.environ["MOCK_IMAGE"] = "true"
 os.environ["JWT_SECRET"] = "test-secret-at-least-32-bytes-long-xxxxxxxx"
 
 import bcrypt
@@ -19,11 +20,12 @@ def tmp_env(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'test.db'}")
     monkeypatch.setenv("STORAGE_DIR", str(tmp_path / "storage"))
     from app import db
-    from app.ai import get_ai_provider
+    from app.ai import get_ai_provider, get_image_provider
     from app.config import get_settings
 
     get_settings.cache_clear()
     get_ai_provider.cache_clear()
+    get_image_provider.cache_clear()
     db._engine = None
     yield
     if db._engine is not None:
@@ -31,6 +33,7 @@ def tmp_env(tmp_path, monkeypatch):
     db._engine = None
     get_settings.cache_clear()
     get_ai_provider.cache_clear()
+    get_image_provider.cache_clear()
 
 
 @pytest.fixture()

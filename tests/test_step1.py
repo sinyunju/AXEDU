@@ -10,7 +10,9 @@ from app.models import (
 def test_health(client):
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "mock_ai": True, "ai_provider": "mock"}
+    assert r.json() == {
+        "status": "ok", "mock_ai": True, "mock_image": True, "ai_provider": "mock", "image_provider": "mock",
+    }
 
 
 def test_cors_allows_localhost(client):
@@ -60,4 +62,6 @@ def test_mock_provider_shapes(tmp_env):
     assert all(q["type"] in ("ox", "choice") for q in quiz["questions"])
     chat = asyncio.run(p.chat([{"page_no": 2}], [], [], "질문"))
     assert chat["related_page"] == 2
-    assert asyncio.run(p.generate_image("x")).startswith(b"\x89PNG")
+    from app.ai import get_image_provider
+
+    assert asyncio.run(get_image_provider().generate_image("x")).startswith(b"\x89PNG")

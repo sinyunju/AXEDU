@@ -21,12 +21,17 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me"
     jwt_expire_minutes: int = 720
 
-    mock_ai: bool = True
+    mock_ai: bool = True  # 텍스트 LLM mock
+    mock_image: bool = True  # 이미지 생성 mock (실제 호출은 1장에 크레딧 소모가 커서 따로 제어)
     ai_base_url: str = "https://api.baze.co/v1/gateway"
     ai_api_key: str = ""
     model_fast: str = "gemini-3.5-flash-lite"
     model_main: str = "gemini-3.8-flash"
     model_image: str = "gemini-nano-banana-2.1"
+    image_size: str = "1K"  # Nano Banana: 1K | 2K | 4K
+    image_aspect_ratio: str = "1:1"
+    ai_timeout_seconds: float = 90  # Gateway 권장 60초 이상
+    generate_concurrency: int = 3  # 페이지 재구성 동시 호출 수
 
     @property
     def cors_origins(self) -> list[str]:
