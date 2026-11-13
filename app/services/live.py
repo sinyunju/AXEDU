@@ -166,6 +166,8 @@ class LiveCaptioner:
         out = await self._provider_getter().live_caption(source_text, transcript, previous)
         easy = [s.strip() for s in out.get("easy_transcript", []) if s and s.strip()]
         words = _merge_hard_words(previous_words, out.get("hard_words", []))
+        if easy == previous and words == previous_words:
+            return None  # 잡담만 있었던 경우 등: 바뀐 게 없으면 저장·전송하지 않음
 
         with Session(get_engine()) as session:
             live = session.get(PageLive, (lesson_id, page_no)) or PageLive(lesson_id=lesson_id, page_no=page_no)
