@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.ai import get_ai_provider
 from app.config import get_settings
 from app.db import init_db
+from app.routers import auth
 
 
 class HealthResponse(BaseModel):
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.include_router(auth.router)
     app.mount("/files", StaticFiles(directory=settings.storage_dir), name="files")
 
     @app.get("/health", response_model=HealthResponse, tags=["system"])
