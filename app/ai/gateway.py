@@ -95,7 +95,7 @@ class GatewayTextProvider(AIProvider):
     async def restructure_page(self, source_text: str) -> dict[str, Any]:
         return await self._json_call(self.model_main, restructure_messages(source_text), RESTRUCTURE_SCHEMA, RestructureOut)
 
-    async def live_caption(self, source_text: str, transcript: str, previous_easy: list[str]) -> dict[str, Any]:
+    async def live_caption(self, source_text: str, transcript: str, previous_easy: list[dict[str, str]]) -> dict[str, Any]:
         # 실시간이라 빠른 모델 사용
         return await self._json_call(self.model_fast, live_caption_messages(source_text, transcript, previous_easy),
                                      LIVE_CAPTION_SCHEMA, LiveCaptionOut)

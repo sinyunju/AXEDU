@@ -97,7 +97,8 @@ class Transcript(SQLModel, table=True):
 class PageLive(SQLModel, table=True):
     lesson_id: int = Field(foreign_key="lesson.id", primary_key=True)
     page_no: int = Field(primary_key=True)
-    easy_transcript: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    # [{text, type: content|flow|notice}] (예전 데이터는 문자열 목록일 수 있음 → normalize_captions)
+    easy_transcript: list[Any] = Field(default_factory=list, sa_column=Column(JSON))
     # 명세 v2에 추가: 실시간 자막에서 나온 어려운 낱말 (재접속 시 복원용)
     hard_words: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     updated_at: datetime = Field(default_factory=utcnow)

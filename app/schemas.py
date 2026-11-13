@@ -1,5 +1,6 @@
 """요청/응답 Pydantic 스키마 (/docs 프론트 연동 기준)."""
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -151,6 +152,11 @@ class ImageRequest(BaseModel):
 
 
 # ---------- 6단계: 학생 페이지 조회 ----------
+class CaptionItem(BaseModel):
+    text: str
+    type: Literal["content", "flow", "notice"] = Field(
+        description="content: 수업 내용 / flow: 수업 흐름 안내(\"지금부터 정리해요\") / notice: 과제·준비물 안내")
+
 class PageView(BaseModel):
     """학생 화면의 한 페이지. 학생은 자유롭게 페이지를 이동하고, teacher_page로 선생님 위치만 안다."""
 
@@ -163,7 +169,7 @@ class PageView(BaseModel):
     easy_sentences: list[str]
     hard_words: list[HardWord]
     generated_image_url: str | None
-    easy_transcript: list[str] = Field(description="이 페이지에서 지금까지 나온 선생님 말씀의 쉬운 자막")
+    easy_transcript: list[CaptionItem] = Field(description="이 페이지에서 지금까지 나온 선생님 말씀의 쉬운 자막")
     transcript_hard_words: list[HardWord] = Field(description="실시간 자막에서 나온 어려운 낱말")
     transcript_updated_at: datetime | None
 

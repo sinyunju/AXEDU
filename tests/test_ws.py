@@ -104,6 +104,7 @@ def test_transcript_page_change_flow(client, session, ctx):
         assert ack["for"] == "transcript" and ack["transcript_id"]
         first, _ = recv_until(student, "page_update")
         assert first["page_no"] == 1 and first["easy_transcript"]
+        assert all(set(item) == {"text", "type"} for item in first["easy_transcript"])
         assert first["hard_words"] == [{"word": "낱말1", "meaning": "뜻"}]
         recv_until(teacher, "page_update")  # 교사 화면도 같은 자막을 받음
 
@@ -379,3 +380,48 @@ def test_unchanged_caption_is_not_broadcast(session, lesson_with_page):
     asyncio.run(scenario())
     assert manager.sent == []
     assert session.get(PageLive, (lid, 1)) is None
+
+
+def test_normalize_captions():
+    from app.services.live import normalize_captions
+
+    assert normalize_captions([
+        "예전 문자열 자막",
+        {"text": " 지금부터 정리해요. ", "type": "flow"},
+        {"text": "잎 하나를 가져와요.", "type": "notice"},
+        {"text": "알 수 없는 종류", "type": "weird"},
+        {"text": "  ", "type": "content"},
+        {"type": "content"},
+        3,
+    ]) == [
+        {"text": "예전 문자열 자막", "type": "content"},
+        {"text": "지금부터 정리해요.", "type": "flow"},
+        {"text": "잎 하나를 가져와요.", "type": "notice"},
+        {"text": "알 수 없는 종류", "type": "content"},
+    ]
+    assert normalize_captions(None) == []
+
+
+def test_caption_types_are_saved_and_broadcast(session, lesson_with_page):
+    lid = lesson_with_page
+    manager = FakeManager()
+
+    class Typed(MockProvider):
+        async def live_caption(self, source_text, transcript, previous_easy):
+            return {"easy_transcript": [{"text": "지금부터 정리해요.", "type": "flow"},
+                                        {"text": "식물은 빛으로 양분을 만들어요.", "type": "content"},
+                                        {"text": "다음 시간까지 잎을 가져와요.", "type": "notice"}],
+                    "hard_words": []}
+
+    cap = LiveCaptioner(manager, interval=0, provider_getter=lambda: Typed(), clock=FakeClock())
+
+    async def scenario():
+        add_transcript(session, lid, "정리해 볼게요 ...")
+        cap.on_transcript(lid, 1)
+        await cap.wait_idle()
+
+    asyncio.run(scenario())
+    types = [i["type"] for i in manager.sent[0]["easy_transcript"]]
+    assert types == ["flow", "content", "notice"]
+    session.expire_all()
+    assert [i["type"] for i in session.get(PageLive, (lid, 1)).easy_transcript] == types

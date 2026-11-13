@@ -17,7 +17,7 @@ from app.db import get_engine
 from app.models import Course, Lesson, LessonStatus, Page, PageLive, Role, Transcript, User
 from app.permissions import STUDENT_VISIBLE_STATUSES, is_enrolled
 from app.security import decode_access_token
-from app.services.live import LiveHub
+from app.services.live import LiveHub, normalize_captions
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -104,7 +104,8 @@ async def lesson_socket(websocket: WebSocket, lesson_id: int, token: str = Query
         await websocket.send_json({"type": "teacher_page", "page_no": lesson.current_page})
         if live is not None:
             await websocket.send_json({"type": "page_update", "page_no": live.page_no,
-                                       "easy_transcript": live.easy_transcript, "hard_words": live.hard_words})
+                                       "easy_transcript": normalize_captions(live.easy_transcript),
+                                       "hard_words": live.hard_words})
         if lesson.status == LessonStatus.ended:
             await websocket.send_json({"type": "lesson_ended"})
 

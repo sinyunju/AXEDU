@@ -1,4 +1,5 @@
 """프롬프트 (CLAUDE.md 7절)."""
+import json
 
 COMMON_RULES = """\
 너는 경계선 지능(느린 학습자) 학생을 돕는 교과 보조 선생님이야. 대상은 초등 고학년~중학생이야.
@@ -57,17 +58,27 @@ LIVE_CAPTION_TASK = """\
 
 출력 JSON 형식:
 {
-  "easy_transcript": ["쉬운 자막 문장", ...],
+  "easy_transcript": [{"text": "쉬운 자막 문장", "type": "content | flow | notice"}, ...],
   "hard_words": [{"word": "핵심 용어", "meaning": "쉬운 뜻"}]
 }
 
+자막 항목의 type:
+- content: 수업 내용 설명. 예) "식물은 빛으로 양분을 만들어요."
+- flow: 수업이 어디로 가는지 알려 주는 말. 예) "지금부터 정리해요.", "첫 번째는 광합성이에요.", "이제 엽록체를 볼 거예요."
+- notice: 과제·준비물·시험 같은 안내. 예) "다음 시간까지 잎 하나를 가져와요."
+
 작성 방법:
-- easy_transcript는 이 페이지의 자막 전체 목록이야. "이전 자막"을 앞부분에 그대로 두고, 새로 말한 내용만 뒤에 덧붙인다.
+- easy_transcript는 이 페이지의 자막 전체 목록이야. "이전 자막"을 앞부분에 그대로(text와 type 모두) 두고, 새로 말한 내용만 뒤에 덧붙인다.
   학생이 이미 읽은 문장이니 이전 자막은 틀린 내용이 아니면 고치지 않는다.
-- 선생님 말씀의 수업 내용만 쓴다. 출석, 생활지도, 잡담, "자 다음", "음" 같은 말은 뺀다. 새로 덧붙일 수업 내용이 없으면 이전 자막을 그대로 돌려준다.
+- 다음 말은 자막에 넣지 않는다:
+  - 단순한 이동·주목 멘트: "다음 장 넘겨 볼까요", "여기 보세요", "자 다음", "이거 보이죠"
+  - 출석, 생활지도("휴대폰 넣으세요"), 잡담, "음", "어" 같은 군말
+  - 새로 덧붙일 내용이 없으면 이전 자막을 그대로 돌려준다.
 - 말을 그대로 받아 적지 말고, 뜻을 살려 쉬운 문장으로 정리한다. 말하는 도중 끊긴 부분은 앞뒤 맥락이 분명할 때만 이어서 쓴다.
-- 페이지 글은 선생님 말을 이해하기 위한 참고용이야. 선생님이 말하지 않은 페이지 내용을 자막에 넣지 않는다.
-- hard_words: 선생님 말씀에 나온 핵심 용어 중 학생이 모를 만한 것만(0~3개).
+- 자막의 모든 문장은 선생님이 실제로 한 말에서 나와야 한다. 선생님이 아직 말하지 않은 내용은 페이지 글에 있더라도 절대 쓰지 않는다.
+  페이지 글은 음성 인식 오타를 바로잡고 용어를 정확히 쓰는 데에만 참고한다.
+  예) 선생님이 "여기 초록색 알갱이들 보이죠"라고만 했다면, 페이지 글에 "엽록체"가 있어도 "이것을 엽록체라고 해요"를 쓰지 않는다.
+- hard_words: 선생님이 실제로 말한 핵심 용어 중 학생이 모를 만한 것만(0~3개).
 
 페이지 글(참고용):
 \"\"\"
@@ -83,8 +94,10 @@ LIVE_CAPTION_TASK = """\
 \"\"\""""
 
 
-def live_caption_messages(source_text: str, transcript: str, previous_easy: list[str]) -> list[dict[str, str]]:
-    previous = "\n".join(f"- {s}" for s in previous_easy) if previous_easy else "(없음)"
+def live_caption_messages(source_text: str, transcript: str, previous_easy: list[dict]) -> list[dict[str, str]]:
+    previous = (
+        "\n".join(json.dumps(item, ensure_ascii=False) for item in previous_easy) if previous_easy else "(없음)"
+    )
     content = (
         LIVE_CAPTION_TASK.replace("{source_text}", source_text.strip() or "(글 없음)")
         .replace("{previous}", previous)

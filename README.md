@@ -128,12 +128,19 @@ ws://localhost:8000/ws/lessons/{lesson_id}?token=<access_token>
 
 ```json
 {"type": "teacher_page", "page_no": 2}
-{"type": "page_update", "page_no": 1, "easy_transcript": ["식물은 스스로 양분을 만들어요.", "..."], "hard_words": [{"word": "광합성", "meaning": "..."}]}
+{"type": "page_update", "page_no": 3,
+ "easy_transcript": [
+   {"text": "지금부터 정리해요.", "type": "flow"},
+   {"text": "식물은 빛으로 양분을 만들어요.", "type": "content"},
+   {"text": "다음 시간까지 잎 하나를 가져와요.", "type": "notice"}
+ ],
+ "hard_words": [{"word": "광합성", "meaning": "..."}]}
 {"type": "lesson_started", "page_no": 1}
 {"type": "lesson_ended"}
 ```
 
 - `page_update`의 `easy_transcript`는 그 페이지 자막 **전체**입니다 (덧붙이지 말고 교체). 이전 문장은 바뀌지 않고 뒤에 추가되는 형태입니다.
+- 자막 항목 `type`: `content` 수업 내용 / `flow` 수업 흐름 안내("지금부터 정리해요", "이제 엽록체를 볼 거예요") / `notice` 과제·준비물 안내. 화면에서 `flow`는 구분선·작은 글씨, `notice`는 강조 상자처럼 다르게 보여 주면 좋습니다. `GET /lessons/{id}/pages/{n}`의 `easy_transcript`도 같은 형식입니다.
 - 학생은 페이지를 자유롭게 이동하므로, 지금 보고 있는 페이지의 `page_update`만 화면에 반영하고 나머지는 페이지별로 보관하면 됩니다.
 - `lesson_started`는 명세 외 추가 메시지입니다 (승인 회차에 미리 접속한 학생에게 시작을 알림).
 
@@ -145,7 +152,7 @@ ws://localhost:8000/ws/lessons/{lesson_id}?token=<access_token>
 {"type": "error", "detail": "수업이 진행 중이 아닙니다. ..."}
 ```
 
-실시간 자막은 페이지의 첫 발화는 바로, 이후에는 마지막 호출 15초 뒤(새 발화가 있을 때), 페이지를 넘기거나 수업을 끝낼 때 갱신됩니다. 잡담·출석·생활지도 발화는 자막에서 빠집니다.
+실시간 자막은 페이지의 첫 발화는 바로, 이후에는 마지막 호출 15초 뒤(새 발화가 있을 때), 페이지를 넘기거나 수업을 끝낼 때 갱신됩니다. 잡담·출석·생활지도 발화와 "다음 장 넘겨 볼까요", "여기 보세요" 같은 단순 이동 멘트는 자막에서 빠지고, 선생님이 아직 말하지 않은 페이지 내용은 자막에 넣지 않습니다.
 
 ### 직접 시험하기
 

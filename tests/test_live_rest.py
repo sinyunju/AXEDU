@@ -104,12 +104,14 @@ def test_page_view_content(client, session, ctx):
     v1 = client.get(page_url(ctx, 1), headers=h).json()  # 학생은 1쪽에 머물러도
     assert v1["teacher_page"] == 2 and v1["easy_transcript"] == []  # 선생님 위치는 알 수 있음
     v2 = client.get(page_url(ctx, 2), headers=h).json()
-    assert v2["easy_transcript"] == ["엽록체는 초록 알갱이예요."] and v2["transcript_updated_at"]
+    # 예전 형식(문자열)으로 저장된 자막도 {text, type: content}로 읽힘
+    assert v2["easy_transcript"] == [{"text": "엽록체는 초록 알갱이예요.", "type": "content"}]
+    assert v2["transcript_updated_at"]
 
     # 수업이 끝난 뒤에도 복습용으로 조회 가능
     act(client, ctx, "end")
     v2 = client.get(page_url(ctx, 2), headers=h).json()
-    assert v2["lesson_status"] == "ended" and v2["easy_transcript"] == ["엽록체는 초록 알갱이예요."]
+    assert v2["lesson_status"] == "ended" and v2["easy_transcript"][0]["text"] == "엽록체는 초록 알갱이예요."
 
 
 def test_live_and_ended_lessons_listed_for_students(client, ctx):

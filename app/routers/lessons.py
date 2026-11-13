@@ -16,6 +16,7 @@ from app.pdf import PdfError, remove_files, render_pdf
 from app.permissions import get_accessible_lesson, get_owned_course, get_owned_lesson
 from app.schemas import ImageRequest, LessonDetail, LessonOut, PageOut, PageUpdate, PageView
 from app.services.generation import run_generation
+from app.services.live import normalize_captions
 from app.storage import GENERATED_SUBDIR, delete_file, save_file
 
 logger = logging.getLogger(__name__)
@@ -361,7 +362,7 @@ def get_page_view(
         easy_sentences=out.easy_sentences,
         hard_words=out.hard_words,
         generated_image_url=out.generated_image_url,
-        easy_transcript=live.easy_transcript if live else [],
+        easy_transcript=normalize_captions(live.easy_transcript) if live else [],
         transcript_hard_words=live.hard_words if live else [],
         transcript_updated_at=live.updated_at if live else None,
     )
