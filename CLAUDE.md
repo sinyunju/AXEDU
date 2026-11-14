@@ -32,7 +32,7 @@
 - 설정은 `.env` + pydantic-settings. `.env.example` 제공 (`JWT_SECRET` 포함)
 
 ## 3. 데이터 모델
-- **User**: id, login_id(고유), password_hash, name, role(`teacher | student`), created_at
+- **User**: id, login_id(고유), password_hash, name, role(`teacher | student`), avatar_path(nullable, 프로필 사진), created_at
 - **Course**(과목): id, teacher_id → User, name, description, invite_code(6자리 영숫자, 고유), created_at
 - **Enrollment**(수강 등록): id, course_id, student_id → User, joined_at  (course_id+student_id 고유)
 - **Lesson**(수업 회차): id, course_id, session_no(회차 번호), title, class_date(nullable),
@@ -63,8 +63,11 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 
 ### 인증
 - `POST /auth/signup` (body: {login_id, password, name, role}) → 사용자 생성
-- `POST /auth/login` (body: {login_id, password}) → {access_token, user: {id, name, role}}
-- `GET /auth/me` → 현재 사용자
+- `POST /auth/login` (body: {login_id, password}) → {access_token, user: {id, login_id, name, role, avatar_url}}
+- `GET /auth/me` → 현재 사용자 (avatar_url 포함)
+- `PATCH /auth/me` (body: {name?, avatar_url?: null}) → 이름 변경, avatar_url에 null을 보내면 사진 삭제
+- `POST /auth/me/avatar` (multipart: file, JPEG/PNG/WebP 2MB 이하) → {avatar_url}
+- `POST /auth/me/password` (body: {current, next}) → 204. 지금 비밀번호가 틀리면 400
 
 ### 과목 (교사)
 - `POST /courses` (body: {name, description}) → 과목 생성 + invite_code 발급

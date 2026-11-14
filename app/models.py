@@ -36,6 +36,7 @@ class User(SQLModel, table=True):
     password_hash: str
     name: str
     role: Role
+    avatar_path: str | None = None  # 프로필 사진 (storage_dir 기준 상대 경로)
     created_at: datetime = Field(default_factory=utcnow)
 
 

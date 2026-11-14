@@ -30,6 +30,7 @@ def get_engine() -> Engine:
 _ADDED_COLUMNS = [
     ("pagelive", "hard_words", "JSON NOT NULL DEFAULT '[]'"),
     ("pagelive", "captioned_upto", "INTEGER NOT NULL DEFAULT 0"),
+    ("user", "avatar_path", "VARCHAR"),
 ]
 
 # 컬럼을 새로 추가한 직후 한 번 실행할 값 채우기

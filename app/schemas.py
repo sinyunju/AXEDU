@@ -7,6 +7,12 @@ from pydantic import BaseModel, Field, field_validator
 from app.models import LessonStatus, Role
 
 
+def _check_password(v: str) -> str:
+    if len(v.encode()) > 72:
+        raise ValueError("비밀번호는 72바이트 이하여야 합니다")
+    return v
+
+
 class SignupRequest(BaseModel):
     login_id: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$", examples=["teacher1"])
     password: str = Field(min_length=4, examples=["pass1234"])
@@ -16,9 +22,7 @@ class SignupRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def _bcrypt_limit(cls, v: str) -> str:
-        if len(v.encode()) > 72:
-            raise ValueError("비밀번호는 72바이트 이하여야 합니다")
-        return v
+        return _check_password(v)
 
 
 class LoginRequest(BaseModel):
@@ -31,10 +35,38 @@ class UserBrief(BaseModel):
     login_id: str
     name: str
     role: Role
+    avatar_url: str | None = Field(default=None, description="프로필 사진 주소 (/files/avatars/...), 없으면 null")
 
 
 class UserOut(UserBrief):
     created_at: datetime
+
+
+class ProfileUpdate(BaseModel):
+    """보낸 필드만 바꾼다. avatar_url은 null만 허용 (사진 삭제). 사진 올리기는 POST /auth/me/avatar."""
+    name: str | None = Field(default=None, min_length=1, max_length=50, examples=["김선생"])
+    avatar_url: None = Field(default=None, description="null을 보내면 프로필 사진 삭제")
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, v: str | None) -> str | None:
+        if v is not None and not v.strip():
+            raise ValueError("이름을 입력해 주세요")
+        return v.strip() if v is not None else v
+
+
+class PasswordChange(BaseModel):
+    current: str = Field(examples=["pass1234"])
+    next: str = Field(min_length=4, examples=["newpass1"])
+
+    @field_validator("next")
+    @classmethod
+    def _bcrypt_limit(cls, v: str) -> str:
+        return _check_password(v)
+
+
+class AvatarOut(BaseModel):
+    avatar_url: str
 
 
 class LoginResponse(BaseModel):

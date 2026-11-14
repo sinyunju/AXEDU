@@ -111,6 +111,140 @@
             "HTTPBearer": []
           }
         ]
+      },
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "내 정보 수정 (보낸 필드만)",
+        "description": "`{name}`으로 이름 변경, `{avatar_url: null}`로 프로필 사진 삭제. 아이디·역할은 바꿀 수 없다.",
+        "operationId": "update_me_auth_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/auth/me/avatar": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "프로필 사진 올리기",
+        "description": "multipart `file` (JPEG/PNG/WebP, 2MB 이하). 예전 사진은 지운다. 사진 주소는 /files 아래라 로그인 없이 열리지만 파일명은 추측할 수 없는 UUID다.",
+        "operationId": "upload_avatar_auth_me_avatar_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_avatar_auth_me_avatar_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/auth/me/password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "비밀번호 변경",
+        "operationId": "change_password_auth_me_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "지금 비밀번호가 틀림"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/courses": {
@@ -1633,6 +1767,33 @@
         ],
         "title": "AttemptResultItem"
       },
+      "AvatarOut": {
+        "properties": {
+          "avatar_url": {
+            "type": "string",
+            "title": "Avatar Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "avatar_url"
+        ],
+        "title": "AvatarOut"
+      },
+      "Body_upload_avatar_auth_me_avatar_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_avatar_auth_me_avatar_post"
+      },
       "Body_upload_lesson_courses__course_id__lessons_post": {
         "properties": {
           "file": {
@@ -2559,6 +2720,59 @@
         "title": "PageView",
         "description": "학생 화면의 한 페이지. 학생은 자유롭게 페이지를 이동하고, teacher_page로 선생님 위치만 안다."
       },
+      "PasswordChange": {
+        "properties": {
+          "current": {
+            "type": "string",
+            "title": "Current",
+            "examples": [
+              "pass1234"
+            ]
+          },
+          "next": {
+            "type": "string",
+            "minLength": 4,
+            "title": "Next",
+            "examples": [
+              "newpass1"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "current",
+          "next"
+        ],
+        "title": "PasswordChange"
+      },
+      "ProfileUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "examples": [
+              "김선생"
+            ]
+          },
+          "avatar_url": {
+            "type": "null",
+            "title": "Avatar Url",
+            "description": "null을 보내면 프로필 사진 삭제"
+          }
+        },
+        "type": "object",
+        "title": "ProfileUpdate",
+        "description": "보낸 필드만 바꾼다. avatar_url은 null만 허용 (사진 삭제). 사진 올리기는 POST /auth/me/avatar."
+      },
       "QuizOut": {
         "properties": {
           "id": {
@@ -2834,6 +3048,18 @@
           },
           "role": {
             "$ref": "#/components/schemas/Role"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url",
+            "description": "프로필 사진 주소 (/files/avatars/...), 없으면 null"
           }
         },
         "type": "object",
@@ -2861,6 +3087,18 @@
           },
           "role": {
             "$ref": "#/components/schemas/Role"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url",
+            "description": "프로필 사진 주소 (/files/avatars/...), 없으면 null"
           },
           "created_at": {
             "type": "string",

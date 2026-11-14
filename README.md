@@ -118,8 +118,11 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | 메서드 | 경로 | 대상 | 설명 |
 |---|---|---|---|
 | POST | `/auth/signup` | 누구나 | `{login_id, password, name, role}` → 201 사용자 정보 (토큰 없음) |
-| POST | `/auth/login` | 누구나 | `{login_id, password}` → `{access_token, token_type, user: {id, login_id, name, role}}` |
-| GET | `/auth/me` | 로그인 | 내 정보 |
+| POST | `/auth/login` | 누구나 | `{login_id, password}` → `{access_token, token_type, user: {id, login_id, name, role, avatar_url}}` |
+| GET | `/auth/me` | 로그인 | 내 정보 `{id, login_id, name, role, avatar_url, created_at}` |
+| PATCH | `/auth/me` | 로그인 | 보낸 필드만 수정. `{name}` 이름 변경, `{avatar_url: null}` 프로필 사진 삭제 (아이디·역할은 못 바꿈) |
+| POST | `/auth/me/avatar` | 로그인 | multipart `file` (JPEG/PNG/WebP, 2MB 이하) → `{avatar_url}`. 예전 사진은 지움 |
+| POST | `/auth/me/password` | 로그인 | `{current, next}` → 204. 지금 비밀번호가 틀리면 400 `{"detail": "지금 비밀번호가 맞지 않아요"}` |
 | POST | `/courses` | 교사 | `{name, description}` (`description` 생략 가능) → 과목 + 6자리 초대 코드 |
 | GET | `/courses` | 둘 다 | 교사: 만든 과목 / 학생: 등록 과목. 항목마다 `lesson_count`(학생은 승인된 회차만 셈), 학생에게 `invite_code`는 `null` |
 | POST | `/courses/join` | 학생 | `{invite_code}` (대소문자 무시) |
@@ -145,7 +148,7 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 
 **필기 형식**: `strokes`는 `[{"tool": "pen" | "highlighter", "color": "#e5484d", "width": 0.004, "points": [[0.1, 0.2], [0.15, 0.22]]}]`. 좌표와 굵기는 페이지 너비·높이 기준 0~1 비율이라 화면 크기가 달라도 같은 자리에 그려집니다. 한 페이지 최대 1000획·점 5만 개. 필기는 교사·학생 모두 자기 것만 보입니다.
 
-정적 파일: `/files/pages/<uuid>.png`(원본 페이지), `/files/generated/<uuid>.(png|jpg)`(생성 이미지). 인증 없이 제공되며 파일명은 추측할 수 없는 UUID입니다.
+정적 파일: `/files/pages/<uuid>.png`(원본 페이지), `/files/generated/<uuid>.(png|jpg)`(생성 이미지), `/files/avatars/<uuid>.(jpg|png|webp)`(프로필 사진). 인증 없이 제공되며 파일명은 추측할 수 없는 UUID입니다.
 
 ## WebSocket
 
