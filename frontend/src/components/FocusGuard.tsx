@@ -1,6 +1,6 @@
 // 집중 도우미 화면 조각: 켜기 버튼, 카메라 미리보기, "집중!" 알림
-import { AlertTriangle, Camera, CameraOff, Loader2, X } from 'lucide-react';
-import rabbit from '../assets/rabbit.png';
+import { Camera, CameraOff, Loader2, X } from 'lucide-react';
+import rabbitFace from '../assets/rabbit-face.png';
 import type { FocusReason, useFocusGuard } from '../hooks/useFocusGuard';
 
 type Guard = ReturnType<typeof useFocusGuard>;
@@ -47,22 +47,24 @@ export function FocusPreview({ guard }: { guard: Guard }) {
   );
 }
 
-/** "집중!" 알림: 위쪽에 크게 + 가운데 토끼 */
+/** "집중!" 알림: 배경 없이 화면 가운데에 [집] [토끼 얼굴] [중]을 한 줄로 크게 */
 export function FocusAlert({ guard }: { guard: Guard }) {
   if (!guard.alert) return null;
   return (
-    <div className="focus-alert" role="alertdialog" aria-modal="true" aria-labelledby="focus-alert-title" aria-describedby="focus-alert-desc">
-      <div className="focus-banner">
-        <AlertTriangle size={40} strokeWidth={2.6} />
-        <div>
-          <strong id="focus-alert-title">집중!</strong>
-          <span id="focus-alert-desc">{REASON[guard.alert]}</span>
-        </div>
-      </div>
-      <div className="focus-rabbit">
-        <img src={rabbit} alt="토끼가 기다리고 있어요" draggable={false} />
-      </div>
-      <button type="button" className="btn btn-lg focus-back" onClick={guard.dismiss} autoFocus>
+    <div className="focus-alert" role="alert" aria-labelledby="focus-alert-title" aria-describedby="focus-alert-desc">
+      <h2 id="focus-alert-title" className="focus-line" aria-label="집중">
+        <span className="focus-char" aria-hidden>
+          집
+        </span>
+        <img className="focus-face" src={rabbitFace} alt="" draggable={false} />
+        <span className="focus-char" aria-hidden>
+          중
+        </span>
+      </h2>
+      <p id="focus-alert-desc" className="sr-only">
+        {REASON[guard.alert]}
+      </p>
+      <button type="button" className="focus-back" onClick={guard.dismiss}>
         다시 집중할게요
       </button>
     </div>
