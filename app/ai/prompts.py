@@ -1,4 +1,4 @@
-"""프롬프트 (CLAUDE.md 7절)."""
+"""프롬프트 (SPEC.md 7절)."""
 import json
 
 COMMON_RULES = """\
@@ -203,7 +203,7 @@ def quiz_messages(pages: list[dict], transcripts: list[dict]) -> list[dict[str, 
             {"role": "user", "content": QUIZ_TASK.replace("{content}", content)}]
 
 
-# 챗봇 거절 문구 (CLAUDE.md 7절 작업 4)
+# 챗봇 거절 문구 (SPEC.md 7절 작업 4)
 OFF_TOPIC_ANSWER = "이건 오늘 수업과 다른 이야기예요. 수업 내용을 물어봐 줄래요?"
 NOT_COVERED_ANSWER = "오늘 수업에서는 거기까지 나오지 않았어요. 선생님께 물어보면 알려 주실 거예요."
 

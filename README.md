@@ -5,7 +5,7 @@
 수업 후에는 확인 문제와 수업 범위 챗봇을 학생별로 제공합니다.
 
 - 기술: Python 3.12+ (3.13에서 개발·테스트), FastAPI, SQLite + SQLModel, PyMuPDF, 안뇽GPT API Gateway
-- 상세 명세: [CLAUDE.md](CLAUDE.md)
+- 상세 명세: [docs/SPEC.md](docs/SPEC.md)
 - **API 문서(프론트 연동 기준):** 서버 실행 후 http://localhost:8000/docs
   - 서버 없이 보려면 **[docs/openapi.json](docs/openapi.json)** (OpenAPI 3 명세). https://editor.swagger.io 에 붙여 넣거나 코드 생성기에 넣어 쓸 수 있습니다.
   - WebSocket은 OpenAPI에 포함되지 않으므로 아래 [WebSocket](#websocket) 절을 보세요.

@@ -1,4 +1,4 @@
-"""실시간 수업: WebSocket 연결 관리 + 실시간 쉬운 자막 (CLAUDE.md 5·6절).
+"""실시간 수업: WebSocket 연결 관리 + 실시간 쉬운 자막 (SPEC.md 5·6절).
 
 ⚠️ 단일 프로세스 전제
 연결 목록(ConnectionManager)과 페이지별 자막 상태(LiveCaptioner)를 이 프로세스 메모리에 둔다.

@@ -1,4 +1,4 @@
-"""DB 모델 (CLAUDE.md 3절)."""
+"""DB 모델 (SPEC.md 3절)."""
 from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Any

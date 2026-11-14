@@ -1,4 +1,4 @@
-"""WebSocket: /ws/lessons/{lesson_id}?token=<JWT>  (CLAUDE.md 5절)
+"""WebSocket: /ws/lessons/{lesson_id}?token=<JWT>  (SPEC.md 5절)
 
 연결 관리와 자막 상태는 in-memory (단일 프로세스 전제, app/services/live.py 참고).
 

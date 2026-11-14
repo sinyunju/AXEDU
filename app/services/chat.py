@@ -1,4 +1,4 @@
-"""챗봇 답변 후처리: 4분류(CLAUDE.md 7절 작업 4) 규칙을 모델 출력과 관계없이 서버에서 보장한다."""
+"""챗봇 답변 후처리: 4분류(SPEC.md 7절 작업 4) 규칙을 모델 출력과 관계없이 서버에서 보장한다."""
 from typing import Any
 
 from app.ai.prompts import NOT_COVERED_ANSWER, OFF_TOPIC_ANSWER

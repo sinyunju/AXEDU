@@ -1,7 +1,7 @@
 """LLM/이미지 provider 인터페이스.
 
 텍스트(MOCK_AI)와 이미지(MOCK_IMAGE)는 따로 mock 처리할 수 있도록 provider를 분리한다.
-모든 텍스트 메서드는 CLAUDE.md 7절의 JSON 스키마에 맞는 dict를 반환한다.
+모든 텍스트 메서드는 SPEC.md 7절의 JSON 스키마에 맞는 dict를 반환한다.
 """
 from abc import ABC, abstractmethod
 from typing import Any
