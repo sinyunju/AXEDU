@@ -27,7 +27,7 @@ export const config = {
  */
 export const features = {
   superschool: useMock, // 슈퍼스쿨 로그인·연동
-  calendar: useMock, // 메인 화면 일정
+  calendar: true, // 메인 화면 일정 (실서버는 회차의 수업 날짜만, 학사 일정은 슈퍼스쿨 연동 후)
   profileEdit: useMock, // 이름·이메일 수정, 프로필 사진, 비밀번호 변경
   explainTerm: useMock, // 단어를 넣으면 AI가 뜻 채우기
 };

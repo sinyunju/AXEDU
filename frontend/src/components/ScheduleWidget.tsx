@@ -1,9 +1,10 @@
-// 메인 화면 일정: 슈퍼스쿨 학사 일정 + 토끼와 거북이 수업. 주/월 보기를 고를 수 있음
+// 메인 화면 일정: 토끼와 거북이 수업(회차의 수업 날짜) + 슈퍼스쿨 학사 일정(연동 시). 주/월 보기를 고를 수 있음
 import { ArrowLeft, ArrowRight, CalendarDays, CalendarRange, ChevronRight, Clock, School } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { OPEN_TO_STUDENTS, type CalendarEvent, type Role } from '../api/types';
+import { features } from '../config';
 import { useAsync } from '../hooks/useAsync';
 import { Segmented } from './Segmented';
 import { SuperschoolButton } from './SuperschoolButton';
@@ -218,14 +219,15 @@ export function ScheduleWidget({ role }: { role: Role }) {
         </div>
 
         <div className="cal-legend">
-          {TONES.map((t) => (
+          {/* 학사 일정(시험·행사·휴업일)은 슈퍼스쿨 연동이 있을 때만 */}
+          {TONES.filter((t) => t.key === 'lesson' || features.superschool).map((t) => (
             <span key={t.key}>
               <i className={`dot ${t.key}`} /> {t.label}
             </span>
           ))}
         </div>
 
-        {cal.data && !cal.data.superschoolLinked && (
+        {features.superschool && cal.data && !cal.data.superschoolLinked && (
           <div className="link-banner">
             <School size={20} />
             <span className="grow small">
