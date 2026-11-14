@@ -1,13 +1,13 @@
-# 토끼와 거북이 — 백엔드
+# 토끼와 거북이 — 백엔드 상세 문서
 
 경계선 지능(느린 학습자) 학생이 일반 학급 수업을 따라갈 수 있게 돕는 서비스의 백엔드입니다.
 교사가 올린 수업 자료(PDF)를 AI가 쉬운 문장으로 바꾸고, 수업 중 교사의 말을 실시간 쉬운 자막으로 학생에게 보내며,
 수업 후에는 확인 문제와 수업 범위 챗봇을 학생별로 제공합니다.
 
 - 기술: Python 3.12+ (3.13에서 개발·테스트), FastAPI, SQLite + SQLModel, PyMuPDF, 안뇽GPT API Gateway
-- 상세 명세: [docs/SPEC.md](docs/SPEC.md)
+- 상세 명세: [SPEC.md](SPEC.md)
 - **API 문서(프론트 연동 기준):** 서버 실행 후 http://localhost:8000/docs
-  - 서버 없이 보려면 **[docs/openapi.json](docs/openapi.json)** (OpenAPI 3 명세). https://editor.swagger.io 에 붙여 넣거나 코드 생성기에 넣어 쓸 수 있습니다.
+  - 서버 없이 보려면 **[openapi.json](openapi.json)** (OpenAPI 3 명세). https://editor.swagger.io 에 붙여 넣거나 코드 생성기에 넣어 쓸 수 있습니다.
   - WebSocket은 OpenAPI에 포함되지 않으므로 아래 [WebSocket](#websocket) 절을 보세요.
 
 ## 로컬 실행
@@ -95,7 +95,7 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 
 ## API 요약
 
-인증이 필요한 API는 `Authorization: Bearer <access_token>`. 자세한 요청/응답 스키마는 `/docs` 또는 [docs/openapi.json](docs/openapi.json).
+인증이 필요한 API는 `Authorization: Bearer <access_token>`. 자세한 요청/응답 스키마는 `/docs` 또는 [openapi.json](openapi.json).
 
 **오류 형식**
 
