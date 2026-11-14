@@ -39,6 +39,7 @@ type RawServerMessage =
   | { type: 'lesson_ended' }
   | { type: 'ack'; for: 'transcript' | 'page_change'; page_no: number; ignored?: boolean }
   | { type: 'error'; detail: string }
+  | { type: 'pointer'; page_no: number; x: number | null; y: number | null }
   | { type: 'pong' };
 
 function fromServer(raw: RawServerMessage): ServerMessage | null {
@@ -62,15 +63,26 @@ function fromServer(raw: RawServerMessage): ServerMessage | null {
       return { type: 'ack', for: raw.for, pageIndex: raw.page_no, ignored: raw.ignored };
     case 'error':
       return { type: 'error', detail: raw.detail };
+    case 'pointer':
+      return {
+        type: 'pointer',
+        pageIndex: raw.page_no,
+        pos: raw.x === null || raw.y === null ? null : { x: raw.x, y: raw.y },
+      };
     default:
       return null; // pong 등
   }
 }
 
 function toServer(msg: TeacherMessage) {
-  return msg.type === 'page_change'
-    ? { type: 'page_change', page_no: msg.pageIndex }
-    : { type: 'transcript', page_no: msg.pageIndex, text: msg.text, final: true }; // 확정된 문장만 보냄
+  switch (msg.type) {
+    case 'page_change':
+      return { type: 'page_change', page_no: msg.pageIndex };
+    case 'pointer':
+      return { type: 'pointer', page_no: msg.pageIndex, x: msg.pos?.x ?? null, y: msg.pos?.y ?? null };
+    default:
+      return { type: 'transcript', page_no: msg.pageIndex, text: msg.text, final: true }; // 확정된 문장만 보냄
+  }
 }
 
 function connectWs(lessonId: string, onMessage: (msg: ServerMessage) => void): LiveChannel {
@@ -116,7 +128,7 @@ function connectWs(lessonId: string, onMessage: (msg: ServerMessage) => void): L
     send(msg) {
       if (msg.type === 'transcript' && !msg.text.trim()) return;
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(toServer(msg)));
-      else queue.push(msg);
+      else if (msg.type !== 'pointer') queue.push(msg); // 레이저 위치는 지나면 의미 없으므로 버림
     },
     close() {
       closed = true;
@@ -156,6 +168,10 @@ function connectMock(lessonId: string, role: Role, onMessage: (msg: ServerMessag
           /* 무시 */
         }
         broadcast({ type: 'teacher_page', pageIndex: msg.pageIndex });
+        return;
+      }
+      if (msg.type === 'pointer') {
+        bc.postMessage({ type: 'pointer', pageIndex: msg.pageIndex, pos: msg.pos } satisfies ServerMessage); // 다른 탭에만
         return;
       }
       if (!msg.text.trim()) return;

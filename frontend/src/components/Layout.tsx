@@ -75,8 +75,12 @@ function UserMenu() {
   );
 }
 
+// 수업 화면은 자료를 크게 보여야 해서 본문 폭을 넓힘
+const WIDE_ROUTES = /^\/(class\/[^/]+|teacher\/lessons\/[^/]+\/live)\/?$/;
+
 export function Layout() {
   const { user } = useAuth();
+  const location = useLocation();
 
   return (
     <div className="app">
@@ -94,7 +98,7 @@ export function Layout() {
           </div>
         </div>
       </header>
-      <main className="app-main">
+      <main className={`app-main ${WIDE_ROUTES.test(location.pathname) ? 'wide' : ''}`}>
         <Outlet />
       </main>
     </div>

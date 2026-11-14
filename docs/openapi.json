@@ -1224,6 +1224,120 @@
         }
       }
     },
+    "/lessons/{lesson_id}/annotations": {
+      "get": {
+        "tags": [
+          "annotations"
+        ],
+        "summary": "내 필기 (전체 페이지)",
+        "operationId": "list_annotations_lessons__lesson_id__annotations_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lessons/{lesson_id}/annotations/{page_no}": {
+      "put": {
+        "tags": [
+          "annotations"
+        ],
+        "summary": "내 필기 저장 (페이지 전체를 덮어씀, 빈 배열이면 삭제)",
+        "operationId": "save_annotation_lessons__lesson_id__annotations__page_no__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Page No"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnnotationIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1248,6 +1362,76 @@
   },
   "components": {
     "schemas": {
+      "AnnotationIn": {
+        "properties": {
+          "strokes": {
+            "items": {
+              "$ref": "#/components/schemas/Stroke"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "title": "Strokes",
+            "description": "이 페이지 필기 전체 (빈 배열이면 삭제)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strokes"
+        ],
+        "title": "AnnotationIn"
+      },
+      "AnnotationList": {
+        "properties": {
+          "pages": {
+            "items": {
+              "$ref": "#/components/schemas/AnnotationOut"
+            },
+            "type": "array",
+            "title": "Pages",
+            "description": "필기가 있는 페이지만"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pages"
+        ],
+        "title": "AnnotationList"
+      },
+      "AnnotationOut": {
+        "properties": {
+          "page_no": {
+            "type": "integer",
+            "title": "Page No"
+          },
+          "strokes": {
+            "items": {
+              "$ref": "#/components/schemas/Stroke"
+            },
+            "type": "array",
+            "title": "Strokes"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "저장한 적 없으면 null"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_no",
+          "strokes",
+          "updated_at"
+        ],
+        "title": "AnnotationOut"
+      },
       "AttemptAnswer": {
         "properties": {
           "question_id": {
@@ -2456,6 +2640,77 @@
           "role"
         ],
         "title": "SignupRequest"
+      },
+      "Stroke": {
+        "properties": {
+          "tool": {
+            "type": "string",
+            "enum": [
+              "pen",
+              "highlighter"
+            ],
+            "title": "Tool"
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Color",
+            "examples": [
+              "#e5484d"
+            ]
+          },
+          "width": {
+            "type": "number",
+            "maximum": 0.1,
+            "exclusiveMinimum": 0.0,
+            "title": "Width",
+            "description": "페이지 너비 대비 선 굵기",
+            "examples": [
+              0.004
+            ]
+          },
+          "points": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "minItems": 1,
+            "title": "Points",
+            "description": "[[x, y], ...] 0~1",
+            "examples": [
+              [
+                [
+                  0.1,
+                  0.2
+                ],
+                [
+                  0.15,
+                  0.22
+                ]
+              ]
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "tool",
+          "color",
+          "width",
+          "points"
+        ],
+        "title": "Stroke",
+        "description": "필기 한 획. 좌표·굵기는 페이지 크기 기준 0~1 비율이라 화면 크기가 달라도 같은 자리에 그려진다."
       },
       "UserBrief": {
         "properties": {

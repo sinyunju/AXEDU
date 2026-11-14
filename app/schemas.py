@@ -242,3 +242,45 @@ class ChatMessageOut(BaseModel):
 class ChatExchange(BaseModel):
     question: ChatMessageOut
     answer: ChatMessageOut
+
+
+# ---------- 필기 ----------
+MAX_STROKES_PER_PAGE = 1000
+MAX_POINTS_PER_STROKE = 5000
+MAX_POINTS_PER_PAGE = 50000
+
+
+class Stroke(BaseModel):
+    """필기 한 획. 좌표·굵기는 페이지 크기 기준 0~1 비율이라 화면 크기가 달라도 같은 자리에 그려진다."""
+    tool: Literal["pen", "highlighter"]
+    color: str = Field(pattern=r"^#[0-9a-fA-F]{6}$", examples=["#e5484d"])
+    width: float = Field(gt=0, le=0.1, description="페이지 너비 대비 선 굵기", examples=[0.004])
+    points: list[tuple[float, float]] = Field(min_length=1, max_length=MAX_POINTS_PER_STROKE,
+                                              description="[[x, y], ...] 0~1", examples=[[[0.1, 0.2], [0.15, 0.22]]])
+
+    @field_validator("points")
+    @classmethod
+    def _in_range(cls, v: list[tuple[float, float]]) -> list[tuple[float, float]]:
+        # 페이지 가장자리 밖으로 살짝 나간 점은 잘라서 저장
+        return [(min(max(x, 0.0), 1.0), min(max(y, 0.0), 1.0)) for x, y in v]
+
+
+class AnnotationIn(BaseModel):
+    strokes: list[Stroke] = Field(max_length=MAX_STROKES_PER_PAGE, description="이 페이지 필기 전체 (빈 배열이면 삭제)")
+
+    @field_validator("strokes")
+    @classmethod
+    def _total_points(cls, v: list[Stroke]) -> list[Stroke]:
+        if sum(len(s.points) for s in v) > MAX_POINTS_PER_PAGE:
+            raise ValueError(f"한 페이지 필기는 점 {MAX_POINTS_PER_PAGE}개까지 저장할 수 있습니다")
+        return v
+
+
+class AnnotationOut(BaseModel):
+    page_no: int
+    strokes: list[Stroke]
+    updated_at: datetime | None = Field(description="저장한 적 없으면 null")
+
+
+class AnnotationList(BaseModel):
+    pages: list[AnnotationOut] = Field(description="필기가 있는 페이지만")

@@ -127,3 +127,16 @@ class ChatMessage(SQLModel, table=True):
     content: str
     related_page: int | None = None
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class Annotation(SQLModel, table=True):
+    """수업 자료 위 필기. 사용자·회차·페이지마다 하나 (본인만 보고 고친다).
+
+    strokes: [{"tool": "pen"|"highlighter", "color": "#rrggbb", "width": 0.004,
+               "points": [[x, y], ...]}]  x·y·width는 페이지 너비·높이 기준 0~1 비율
+    """
+    user_id: int = Field(foreign_key="user.id", primary_key=True)
+    lesson_id: int = Field(foreign_key="lesson.id", primary_key=True)
+    page_no: int = Field(primary_key=True)
+    strokes: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    updated_at: datetime = Field(default_factory=utcnow)

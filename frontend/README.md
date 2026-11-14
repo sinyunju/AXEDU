@@ -61,7 +61,7 @@ npm run dev                  # http://localhost:5173 (같은 Wi-Fi 기기는 htt
    - 백엔드 `.env`의 `FRONTEND_ORIGINS`에 `http://PC의IP:5173` 추가 (안 하면 CORS로 막힘)
 4. 스키마 타입 다시 만들기: `npm run gen:api` → `src/api/backend.d.ts`
 
-> `src/api/backend.d.ts`는 실행 중인 백엔드의 `/openapi.json`으로 만든 파일입니다 (`npm run gen:api`).
+> `src/api/backend.d.ts`는 저장소의 `docs/openapi.json`(백엔드에서 `python -m scripts.export_openapi`로 갱신)으로 만든 파일입니다 (`npm run gen:api`).
 > 백엔드 스키마가 바뀌면 다시 만들고 `npm run build`가 통과하는지 확인하세요. 실패하면 `src/api/real.ts`의 변환을 고치면 됩니다.
 
 ### 구조

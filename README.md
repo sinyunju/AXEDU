@@ -138,6 +138,10 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | GET | `/lessons/{id}/quiz/attempts/me` | 학생 | 내 풀이 기록 (최신순) |
 | POST | `/lessons/{id}/chat` | 학생 | `{message}` → `{question, answer}` (`answer.related_page`) |
 | GET | `/lessons/{id}/chat` | 학생 | 내 대화 기록 |
+| GET | `/lessons/{id}/annotations` | 둘 다 | 내 필기 전체 `{pages: [{page_no, strokes, updated_at}]}` (필기 있는 페이지만) |
+| PUT | `/lessons/{id}/annotations/{n}` | 둘 다 | `{strokes}` → 그 페이지 내 필기를 통째로 덮어씀, 빈 배열이면 삭제 |
+
+**필기 형식**: `strokes`는 `[{"tool": "pen" | "highlighter", "color": "#e5484d", "width": 0.004, "points": [[0.1, 0.2], [0.15, 0.22]]}]`. 좌표와 굵기는 페이지 너비·높이 기준 0~1 비율이라 화면 크기가 달라도 같은 자리에 그려집니다. 한 페이지 최대 1000획·점 5만 개. 필기는 교사·학생 모두 자기 것만 보입니다.
 
 정적 파일: `/files/pages/<uuid>.png`(원본 페이지), `/files/generated/<uuid>.(png|jpg)`(생성 이미지). 인증 없이 제공되며 파일명은 추측할 수 없는 UUID입니다.
 
@@ -157,10 +161,13 @@ ws://localhost:8000/ws/lessons/{lesson_id}?token=<access_token>
 ```json
 {"type": "page_change", "page_no": 2}
 {"type": "transcript", "page_no": 2, "text": "이게 엽록체예요", "final": true}
+{"type": "pointer", "page_no": 2, "x": 0.42, "y": 0.31}
 {"type": "ping"}
 ```
 
 - `transcript`는 Web Speech API의 확정 결과(`final: true`)만 보내세요. `final: false`는 저장하지 않고 `ignored`로 응답합니다.
+- `transcript`의 `page_no`는 그 문장을 **말하기 시작할 때** 보던 페이지로 보내세요. 크롬은 말이 끊겨야 문장을 확정하므로, 확정된 순간의 페이지를 쓰면 말하면서 넘긴 경우 앞 페이지 설명이 다음 페이지로 들어갑니다 (프론트 `useSpeechRecognition`은 페이지를 넘기기 직전에 인식을 끊어 확정시킵니다).
+- `pointer`는 레이저 포인터 위치(페이지 기준 0~1)입니다. `x`·`y`를 `null`로 보내면 숨김. 저장하지 않고 응답(ack)도 없으며 **학생에게만** 전달됩니다. 초당 20~25번 정도로 보내면 충분합니다.
 - 수업이 `live`가 아니면 `error`로 응답합니다. 학생은 `ping`만 보낼 수 있습니다.
 
 서버 → 교사·학생 모두 (broadcast)
@@ -182,6 +189,15 @@ ws://localhost:8000/ws/lessons/{lesson_id}?token=<access_token>
 - 자막 항목 `type`: `content` 수업 내용 / `flow` 수업 흐름 안내("지금부터 정리해요", "이제 엽록체를 볼 거예요") / `notice` 과제·준비물 안내. 화면에서 `flow`는 구분선·작은 글씨, `notice`는 강조 상자처럼 다르게 보여 주면 좋습니다. `GET /lessons/{id}/pages/{n}`의 `easy_transcript`도 같은 형식입니다.
 - 학생은 페이지를 자유롭게 이동하므로, 지금 보고 있는 페이지의 `page_update`만 화면에 반영하고 나머지는 페이지별로 보관하면 됩니다.
 - `lesson_started`는 명세 외 추가 메시지입니다 (승인 회차에 미리 접속한 학생에게 시작을 알림).
+
+서버 → 학생만
+
+```json
+{"type": "pointer", "page_no": 2, "x": 0.42, "y": 0.31}
+{"type": "pointer", "page_no": 2, "x": null, "y": null}
+```
+
+- 선생님 레이저 포인터입니다. 학생이 같은 페이지를 보고 있을 때만 표시하세요. 선생님이 페이지를 넘기면(`teacher_page`) 지워 주세요.
 
 서버 → 보낸 교사에게만
 

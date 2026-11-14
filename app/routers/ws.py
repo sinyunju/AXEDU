@@ -45,7 +45,16 @@ class TranscriptMsg(BaseModel):
     final: bool = True
 
 
-_Incoming = TypeAdapter(Annotated[PingMsg | PageChangeMsg | TranscriptMsg, Field(discriminator="type")])
+class PointerMsg(BaseModel):
+    """레이저 포인터 위치 (0~1 비율). x·y가 null이면 포인터를 숨긴다. 저장하지 않고 학생에게만 전달."""
+    type: Literal["pointer"]
+    page_no: int
+    x: float | None = Field(default=None, ge=0, le=1)
+    y: float | None = Field(default=None, ge=0, le=1)
+
+
+_Incoming = TypeAdapter(Annotated[PingMsg | PageChangeMsg | TranscriptMsg | PointerMsg,
+                                  Field(discriminator="type")])
 
 
 class _Reject(Exception):
@@ -144,6 +153,16 @@ async def _handle(hub: LiveHub, lesson_id: int, user: User, raw: str) -> dict | 
         page_count = session.exec(select(func.count()).select_from(Page).where(Page.lesson_id == lesson_id)).one()
         if not 1 <= msg.page_no <= page_count:
             return _error(f"page_no는 1~{page_count} 사이여야 합니다")
+
+        if isinstance(msg, PointerMsg):
+            visible = msg.x is not None and msg.y is not None
+            await hub.connections.broadcast(
+                lesson_id,
+                {"type": "pointer", "page_no": msg.page_no, "x": msg.x if visible else None,
+                 "y": msg.y if visible else None},
+                role=Role.student,
+            )
+            return None  # 초당 수십 번 오므로 ack 생략
 
         if isinstance(msg, PageChangeMsg):
             previous = lesson.current_page

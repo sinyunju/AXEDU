@@ -47,6 +47,7 @@
 - **Quiz**: id, lesson_id, questions(JSON)  (회차당 1개)
 - **QuizAttempt**: id, quiz_id, student_id, answers(JSON), score, submitted_at  (학생별 기록)
 - **ChatMessage**: id, lesson_id, student_id, role(`user | assistant`), content, related_page(nullable), created_at  (학생별·회차별 대화 기록)
+- **Annotation**(필기): user_id, lesson_id, page_no(셋이 PK), strokes(JSON: [{tool: `pen | highlighter`, color: `#rrggbb`, width, points: [[x, y], ...]}]), updated_at  (교사·학생 각자의 수업 자료 필기. 좌표·굵기는 페이지 크기 기준 0~1 비율)
 
 v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는다. 실시간 수업 상태는 Lesson.status=`live`와 Lesson.current_page로 관리한다.
 
@@ -57,6 +58,7 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
   - 교사는 **자기 과목**과 그 하위 데이터만 생성·수정·조회 가능
   - 학생은 **등록한 과목**의 수업만 조회 가능하고, 승인된(`approved` 이상) 회차만 보인다
   - 학생은 자기 문제 기록과 자기 챗봇 대화만 볼 수 있다
+  - 필기는 교사·학생 모두 자기 것만 보고 고친다
   - 권한 없으면 403, 없는 리소스는 404
 
 ### 인증
@@ -96,6 +98,11 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 - `POST /lessons/{lesson_id}/chat` (body: {message}) → 챗봇 답변 (+ 관련 page_no). 이 학생의 이전 대화(최근 N개)를 문맥으로 사용
 - `GET /lessons/{lesson_id}/chat` → 내 대화 기록
 
+### 필기 (교사·학생)
+- `GET /lessons/{lesson_id}/annotations` → 내 필기 전체 ({pages: [{page_no, strokes, updated_at}]}, 필기가 있는 페이지만)
+- `PUT /lessons/{lesson_id}/annotations/{page_no}` (body: {strokes}) → 그 페이지 내 필기 전체를 덮어씀. 빈 배열이면 삭제
+  (한 페이지 최대 1000획·점 5만 개, 한 획 최대 점 5000개. 범위를 벗어난 좌표는 0~1로 자름)
+
 ## 5. WebSocket: `/ws/lessons/{lesson_id}?token=<JWT>`
 - 브라우저 WebSocket은 헤더를 붙이기 어려우므로 토큰을 쿼리로 받는다. 연결 시 토큰 검증 + 권한 확인(교사: 과목 소유자, 학생: 등록 학생). 실패 시 연결 거부
 - 역할은 토큰의 사용자 role로 판단한다 (쿼리로 받지 않음)
@@ -103,13 +110,17 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 
 교사 → 서버
 - `{"type":"page_change","page_no":5}`
-- `{"type":"transcript","page_no":5,"text":"...","final":true}`  (Web Speech API의 확정 결과만 전송)
+- `{"type":"transcript","page_no":5,"text":"...","final":true}`  (Web Speech API의 확정 결과만 전송. page_no는 그 문장을 **말하기 시작할 때** 보던 페이지)
+- `{"type":"pointer","page_no":5,"x":0.42,"y":0.31}`  (레이저 포인터, 0~1 비율. x·y가 null이면 숨김. 저장하지 않고 ack도 보내지 않음)
 
 서버 → 교사·학생 모두 (broadcast, 교사 화면에서도 학생이 받는 자막을 확인할 수 있도록)
 - `{"type":"teacher_page","page_no":5}`
 - `{"type":"page_update","page_no":5,"easy_transcript":[{"text":"...","type":"content"},{"text":"...","type":"flow"}],"hard_words":[...]}`  (easy_transcript는 그 페이지 자막 전체)
 - `{"type":"lesson_started","page_no":1}`  (`POST /lessons/{id}/start` 시. 승인된 회차에 미리 접속해 있던 학생에게 수업 시작을 알림)
 - `{"type":"lesson_ended"}`  (`POST /lessons/{id}/end` 시)
+
+서버 → 학생만
+- `{"type":"pointer","page_no":5,"x":0.42,"y":0.31}`  (교사 레이저. 학생은 그 페이지를 보고 있을 때만 표시. 숨김은 x·y null)
 
 서버 → 교사
 - `{"type":"ack", ...}`, 오류 시 `{"type":"error","detail":"..."}`

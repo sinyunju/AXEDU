@@ -69,9 +69,11 @@ class ConnectionManager:
         room = self._rooms.get(lesson_id, {})
         return sum(1 for r in room.values() if role is None or r == role)
 
-    async def broadcast(self, lesson_id: int, message: dict[str, Any]) -> None:
-        """교사·학생 모두에게 전송. 보내기 실패한 연결은 정리한다."""
-        for ws in list(self._rooms.get(lesson_id, {})):
+    async def broadcast(self, lesson_id: int, message: dict[str, Any], *, role: Role | None = None) -> None:
+        """교사·학생 모두(role을 주면 그 역할만)에게 전송. 보내기 실패한 연결은 정리한다."""
+        for ws, r in list(self._rooms.get(lesson_id, {}).items()):
+            if role is not None and r != role:
+                continue
             try:
                 await ws.send_json(message)
             except Exception:

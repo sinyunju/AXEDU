@@ -818,3 +818,97 @@ input.input::-webkit-datetime-edit { padding: 0; line-height: 1.2; }
 /* 캘린더가 없을 때(실서버 모드): 과목을 넓게 */
 .home-grid.no-cal { grid-template-columns: minmax(0, 1fr); }
 .home-grid.no-cal .home-aside { position: static; }
+
+/* ---------- 수업 자료 보드 (필기·레이저) ---------- */
+.app-main.wide { max-width: 1680px; }
+
+.slide-board { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.slide-board.fill { height: 100%; min-height: 0; }
+
+.slide-toolbar {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap; align-self: flex-start;
+  padding: 5px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  max-width: 100%;
+}
+.slide-board.fill .slide-toolbar { align-self: center; }
+.tool-btn {
+  width: 38px; height: 38px; border-radius: 50%; border: none; background: transparent; color: var(--text-2);
+  display: grid; place-items: center; cursor: pointer;
+}
+.tool-btn:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary-text); }
+.tool-btn.active { background: var(--primary); color: var(--on-primary); }
+.tool-btn:disabled { opacity: 0.35; cursor: default; }
+.tool-btn:focus-visible, .tool-color:focus-visible { outline: 3px solid var(--primary-200); outline-offset: 1px; }
+.tool-sep { width: 1px; height: 22px; background: var(--border-strong); margin: 0 4px; }
+.tool-color {
+  width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border-strong);
+  cursor: pointer; margin: 0 2px;
+}
+.tool-color.active { box-shadow: 0 0 0 2px var(--primary-text); }
+.tool-end { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; padding-right: 4px; }
+.save-state { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+.save-state.error { color: var(--bad); }
+
+/* 무대: 페이지 비율대로 꼭 맞춤. 일반 화면에서는 화면 높이를 넘지 않게 */
+.slide-stage { display: flex; justify-content: center; align-items: center; min-width: 0; max-height: calc(100vh - 170px); }
+.slide-board.fill .slide-stage { flex: 1; min-height: 0; max-height: none; align-items: flex-start; }
+.slide-frame {
+  position: relative; background: #fff; border-radius: var(--r-sm); overflow: hidden;
+  box-shadow: var(--shadow-md); border: 1px solid var(--border); flex: none; max-width: 100%;
+}
+.slide-frame img { width: 100%; height: 100%; object-fit: contain; border-radius: 0; user-select: none; -webkit-user-drag: none; }
+.slide-fallback { position: absolute; inset: 0; overflow: auto; padding: 24px; color: #121a35; font-size: 1.1rem; line-height: 1.9; white-space: pre-line; }
+.slide-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.slide-canvas.live { touch-action: none; }
+.slide-frame:not(.tool-view) .slide-canvas.live { pointer-events: auto; }
+.slide-frame.tool-pen .slide-canvas.live, .slide-frame.tool-highlighter .slide-canvas.live { cursor: crosshair; }
+.slide-frame.tool-eraser .slide-canvas.live { cursor: cell; }
+.slide-frame.tool-laser .slide-canvas.live { cursor: none; }
+.laser-dot {
+  position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #fff 0 18%, #ff2d2d 30% 55%, rgba(255, 45, 45, 0) 72%);
+  box-shadow: 0 0 14px 4px rgba(255, 45, 45, 0.55); transition: transform 50ms linear; z-index: 2;
+}
+
+/* 전체화면 (Fullscreen API 또는 대체 모드) */
+.present { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.present:fullscreen, .present.pseudo-fullscreen {
+  background: var(--bg); padding: 14px 18px; height: 100vh; width: 100vw; overflow: hidden;
+}
+.present:-webkit-full-screen { background: var(--bg); padding: 14px 18px; height: 100vh; width: 100vw; overflow: hidden; }
+.present.pseudo-fullscreen { position: fixed; inset: 0; z-index: 100; height: 100dvh; }
+.present-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.present-bar .grow { flex: 1; min-width: 0; }
+.present-interim {
+  max-width: min(720px, 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--muted); font-size: 0.9rem;
+}
+
+/* 교사 수업 화면: 자료(넓게) + 오른쪽 쉬운 설명 */
+.live-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .live-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 1001px) { .live-side { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow: auto; } }
+
+/* 학생 수업 화면: 자료(넓게) | 끌어서 너비 조절 | 설명 패널 */
+.class-split { display: grid; grid-template-columns: minmax(0, 1fr) 14px var(--side-w, 380px); align-items: start; }
+.class-split .split-handle {
+  align-self: stretch; cursor: col-resize; display: grid; place-items: center; color: var(--muted);
+  touch-action: none; border-radius: 8px; min-height: 120px;
+}
+.class-split .split-handle:hover, .class-split .split-handle:focus-visible { background: var(--primary-soft); color: var(--primary-text); outline: none; }
+.class-split .class-side { min-width: 0; }
+@media (min-width: 861px) {
+  .class-split .class-side { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow: auto; }
+  .present:fullscreen .class-split, .present.pseudo-fullscreen .class-split { flex: 1; min-height: 0; align-items: stretch; }
+  .present:fullscreen .class-side, .present.pseudo-fullscreen .class-side { position: static; max-height: none; height: 100%; }
+}
+@media (max-width: 860px) {
+  .class-split { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .class-split .split-handle { display: none; }
+  .present:fullscreen .class-split, .present.pseudo-fullscreen .class-split { overflow: auto; }
+}
+.class-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.present:fullscreen .class-main, .present.pseudo-fullscreen .class-main { height: 100%; min-height: 0; }
+.class-main > .slide-board.fill { flex: 1; height: auto; }
+.present:fullscreen > .class-main, .present.pseudo-fullscreen > .class-main { flex: 1; height: auto; min-height: 0; }
+.present:-webkit-full-screen > .class-main { flex: 1; height: auto; min-height: 0; }

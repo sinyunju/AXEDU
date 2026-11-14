@@ -359,6 +359,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/lessons/{lesson_id}/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 내 필기 (전체 페이지) */
+        get: operations["list_annotations_lessons__lesson_id__annotations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lessons/{lesson_id}/annotations/{page_no}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 내 필기 저장 (페이지 전체를 덮어씀, 빈 배열이면 삭제) */
+        put: operations["save_annotation_lessons__lesson_id__annotations__page_no__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -380,6 +414,34 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnnotationIn */
+        AnnotationIn: {
+            /**
+             * Strokes
+             * @description 이 페이지 필기 전체 (빈 배열이면 삭제)
+             */
+            strokes: components["schemas"]["Stroke"][];
+        };
+        /** AnnotationList */
+        AnnotationList: {
+            /**
+             * Pages
+             * @description 필기가 있는 페이지만
+             */
+            pages: components["schemas"]["AnnotationOut"][];
+        };
+        /** AnnotationOut */
+        AnnotationOut: {
+            /** Page No */
+            page_no: number;
+            /** Strokes */
+            strokes: components["schemas"]["Stroke"][];
+            /**
+             * Updated At
+             * @description 저장한 적 없으면 null
+             */
+            updated_at: string | null;
+        };
         /** AttemptAnswer */
         AttemptAnswer: {
             /** Question Id */
@@ -898,6 +960,46 @@ export interface components {
             name: string;
             /** @example teacher */
             role: components["schemas"]["Role"];
+        };
+        /**
+         * Stroke
+         * @description 필기 한 획. 좌표·굵기는 페이지 크기 기준 0~1 비율이라 화면 크기가 달라도 같은 자리에 그려진다.
+         */
+        Stroke: {
+            /**
+             * Tool
+             * @enum {string}
+             */
+            tool: "pen" | "highlighter";
+            /**
+             * Color
+             * @example #e5484d
+             */
+            color: string;
+            /**
+             * Width
+             * @description 페이지 너비 대비 선 굵기
+             * @example 0.004
+             */
+            width: number;
+            /**
+             * Points
+             * @description [[x, y], ...] 0~1
+             * @example [
+             *       [
+             *         0.1,
+             *         0.2
+             *       ],
+             *       [
+             *         0.15,
+             *         0.22
+             *       ]
+             *     ]
+             */
+            points: [
+                number,
+                number
+            ][];
         };
         /** UserBrief */
         UserBrief: {
@@ -1788,6 +1890,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_annotations_lessons__lesson_id__annotations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lesson_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_annotation_lessons__lesson_id__annotations__page_no__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lesson_id: number;
+                page_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnotationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

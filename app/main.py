@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from app.ai import get_ai_provider, get_image_provider
 from app.config import get_settings
 from app.db import init_db
-from app.routers import auth, chat, courses, lessons, quiz, ws
+from app.routers import annotations, auth, chat, courses, lessons, quiz, ws
 from app.services.generation import recover_stuck_generations
 from app.services.live import LiveHub
 
@@ -60,6 +60,7 @@ def create_app() -> FastAPI:
     app.include_router(lessons.router)
     app.include_router(quiz.router)
     app.include_router(chat.router)
+    app.include_router(annotations.router)
     app.include_router(ws.router)
     # 실시간 수업 상태 (단일 프로세스 전제, app/services/live.py 참고)
     app.state.live = LiveHub(interval=settings.live_caption_interval_seconds)

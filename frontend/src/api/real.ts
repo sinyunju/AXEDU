@@ -19,6 +19,7 @@ import type {
   QuizResult,
   Role,
   SignupInput,
+  Stroke,
   Term,
   User,
 } from './types';
@@ -270,6 +271,21 @@ export const realApi = {
     ),
   myQuizResults: async (lessonId: string): Promise<QuizResult[]> =>
     (await http<S['AttemptOut'][]>(`/lessons/${lessonId}/quiz/attempts/me`)).map(toQuizResult),
+
+  // 필기 (자기 것만)
+  /** 페이지 번호 → 획 목록 (필기가 있는 페이지만) */
+  async getAnnotations(lessonId: string): Promise<Record<number, Stroke[]>> {
+    const res = await http<S['AnnotationList']>(`/lessons/${lessonId}/annotations`);
+    return Object.fromEntries(res.pages.map((p) => [p.page_no, p.strokes as Stroke[]]));
+  },
+  /** 그 페이지 필기 전체를 덮어씀. 빈 배열이면 삭제. keepalive는 화면을 떠나는 중에도 보내기 위함 */
+  async saveAnnotation(lessonId: string, pageIndex: number, strokes: Stroke[], keepalive = false): Promise<void> {
+    await http<S['AnnotationOut']>(`/lessons/${lessonId}/annotations/${pageIndex}`, {
+      method: 'PUT',
+      body: JSON.stringify({ strokes } satisfies S['AnnotationIn']),
+      keepalive,
+    });
+  },
 
   // 챗봇
   async askChat(lessonId: string, message: string): Promise<ChatReply> {

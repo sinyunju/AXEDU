@@ -24,6 +24,7 @@ import type {
   QuizItem,
   QuizResult,
   SignupInput,
+  Stroke,
   User,
 } from './types';
 import { OPEN_TO_STUDENTS } from './types';
@@ -41,6 +42,7 @@ export const MOCK_KEYS = {
   attempts: 'mock.attempts.v1', // { [`${lessonId}:${userId}`]: QuizResult[] }
   chats: 'mock.chats.v1', // { [`${lessonId}:${userId}`]: ChatMessage[] }
   teacherPage: 'mock.teacherPage', // + `.${lessonId}`
+  annotations: 'mock.annotations.v1', // { [`${lessonId}:${userId}`]: { [page]: Stroke[] } }
 };
 const KEYS = MOCK_KEYS;
 
@@ -741,5 +743,20 @@ export const mockApi: Api & {
     await delay(150);
     const u = currentUser();
     return load<Record<string, ChatMessage[]>>(KEYS.chats, {})[`${lessonId}:${u.id}`] ?? [];
+  },
+
+  // 필기
+  async getAnnotations(lessonId: string): Promise<Record<number, Stroke[]>> {
+    await delay(100);
+    const key = `${lessonId}:${currentUser().id}`;
+    return load<Record<string, Record<number, Stroke[]>>>(KEYS.annotations, {})[key] ?? {};
+  },
+  async saveAnnotation(lessonId: string, pageIndex: number, strokes: Stroke[]): Promise<void> {
+    const key = `${lessonId}:${currentUser().id}`;
+    const all = load<Record<string, Record<number, Stroke[]>>>(KEYS.annotations, {});
+    const mine = { ...(all[key] ?? {}) };
+    if (strokes.length) mine[pageIndex] = strokes;
+    else delete mine[pageIndex];
+    save(KEYS.annotations, { ...all, [key]: mine });
   },
 };

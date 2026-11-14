@@ -194,6 +194,17 @@ export interface ChatReply {
   relatedPage?: number;
 }
 
+/** 수업 자료 위 필기 한 획. 좌표·굵기는 페이지 너비·높이 기준 0~1 비율 */
+export interface Stroke {
+  tool: 'pen' | 'highlighter';
+  color: string; // #rrggbb
+  width: number; // 페이지 너비 대비
+  points: [number, number][];
+}
+
+/** 레이저 포인터 위치 (0~1). null이면 숨김 */
+export type PointerPos = { x: number; y: number } | null;
+
 /** WebSocket: 서버 → 화면 */
 export type ServerMessage =
   | { type: 'teacher_page'; pageIndex: number }
@@ -202,10 +213,13 @@ export type ServerMessage =
   | { type: 'lesson_ended' }
   | { type: 'ack'; for: 'transcript' | 'page_change'; pageIndex: number; ignored?: boolean }
   | { type: 'error'; detail: string }
+  /** 선생님 레이저 포인터 (학생에게만 옴) */
+  | { type: 'pointer'; pageIndex: number; pos: PointerPos }
   /** 서버가 연결을 거부함 (4401/4403/4404). 재연결하지 않음 */
   | { type: 'rejected'; code: number; reason: string };
 
 /** WebSocket: 교사 → 서버 */
 export type TeacherMessage =
   | { type: 'page_change'; pageIndex: number }
-  | { type: 'transcript'; pageIndex: number; text: string };
+  | { type: 'transcript'; pageIndex: number; text: string }
+  | { type: 'pointer'; pageIndex: number; pos: PointerPos };

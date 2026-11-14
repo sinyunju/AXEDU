@@ -1,13 +1,16 @@
 // 수업 중(교사): 들어오면 수업 시작(POST /start) → 자료를 넘기며 설명(음성 인식) → 수업 끝내기(/end) → 퀴즈 만들기
+// - 수업 자료에 필기(펜·형광펜·지우개)하고 레이저 포인터로 가리킬 수 있음. 레이저는 같은 페이지를 보는 학생에게 보임
+// - 전체화면: 자료만 크게 + 위쪽에 마이크·페이지 이동. ←/→, PageUp/PageDown(발표 리모컨)으로 넘김
 import {
   AlertCircle,
   AudioLines,
   CheckCircle2,
-  FileText,
   ListChecks,
   Loader2,
+  Maximize,
   Mic,
   MicOff,
+  Minimize,
   Play,
   Send,
   Sparkles,
@@ -19,15 +22,23 @@ import { api } from '../../api';
 import type { QuizItem } from '../../api/types';
 import { CaptionList } from '../../components/CaptionList';
 import { PageNav } from '../../components/PageNav';
+import { SaveStateLabel } from '../../components/SaveStateLabel';
+import { SlideBoard } from '../../components/SlideBoard';
 import { BackLink, Empty, ErrorView, Loading } from '../../components/ui';
+import { useAnnotations } from '../../hooks/useAnnotations';
 import { useAsync } from '../../hooks/useAsync';
+import { useFullscreen } from '../../hooks/useFullscreen';
 import { useLiveLesson } from '../../hooks/useLiveLesson';
+import { usePageKeys } from '../../hooks/usePageKeys';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 
 export function LiveClass() {
   const { lessonId = '' } = useParams();
   const { data: lesson, loading, error } = useAsync(() => api.getLesson(lessonId), [lessonId]);
   const live = useLiveLesson(lessonId, 'teacher');
+  const notes = useAnnotations(lessonId);
+  const presentRef = useRef<HTMLDivElement>(null);
+  const fs = useFullscreen(presentRef);
   const [pageNo, setPageNo] = useState(1);
   const [manual, setManual] = useState('');
   const [startError, setStartError] = useState('');
@@ -65,18 +76,29 @@ export function LiveClass() {
   }, [pageNo, loadPage]);
 
   const isLive = live.liveStatus === 'live';
-  const speech = useSpeechRecognition((text) => {
-    if (text) send({ type: 'transcript', pageIndex: pageRef.current, text }); // 확정된 문장만 들어옴
-  });
+  // 문장은 말하기 시작할 때 보던 페이지로 보낸다 (확정 시점에는 이미 다음 장일 수 있음)
+  const speech = useSpeechRecognition(
+    (text, page: number) => send({ type: 'transcript', pageIndex: page, text }),
+    () => pageRef.current,
+  );
   const { stop: stopSpeech } = speech;
   useEffect(() => {
     if (!isLive) stopSpeech();
   }, [isLive, stopSpeech]);
 
   function changePage(n: number) {
+    if (n === pageRef.current) return;
+    speech.flush(); // 이전 페이지에서 하던 말을 이전 페이지로 확정
+    pageRef.current = n;
     setPageNo(n);
     send({ type: 'page_change', pageIndex: n });
   }
+
+  const total = lesson?.pages.length ?? 0;
+  usePageKeys(fs.on, (delta) => {
+    const n = pageRef.current + delta;
+    if (n >= 1 && n <= total) changePage(n);
+  });
 
   async function endLesson() {
     if (!window.confirm('수업을 끝낼까요? 남은 설명은 마지막으로 정리돼서 학생 화면에 올라가요.')) return;
@@ -161,9 +183,9 @@ export function LiveClass() {
         )}
       </section>
 
-      {(startError || live.serverError) && (
+      {(startError || live.serverError || speech.error) && (
         <div className="interim">
-          <AlertCircle size={17} /> {startError || live.serverError}
+          <AlertCircle size={17} /> {startError || live.serverError || speech.error}
         </div>
       )}
 
@@ -198,64 +220,99 @@ export function LiveClass() {
         </section>
       )}
 
-      <PageNav current={pageNo} total={lesson.pages.length} onChange={changePage} />
-
-      <div className="two-col">
-        <section className="card card-soft stack sticky-col">
-          <div className="card-title" style={{ marginBottom: 0 }}>
-            <FileText size={20} />
-            <h3>수업 자료</h3>
-            <span className="chip count">{page.index}쪽</span>
+      <div ref={presentRef} className={`present ${fs.pseudo ? 'pseudo-fullscreen' : ''}`}>
+        {fs.on && (
+          <div className="present-bar">
+            {isLive && <span className="live-dot" aria-label="수업 중" />}
+            <strong>
+              {lesson.sessionNo}회차 · {lesson.title}
+            </strong>
+            {isLive && speech.supported && (
+              <button
+                className={`btn btn-sm ${speech.listening ? 'btn-danger' : 'btn-primary'}`}
+                onClick={speech.listening ? speech.stop : speech.start}
+              >
+                {speech.listening ? <MicOff size={16} /> : <Mic size={16} />}
+                {speech.listening ? '음성 인식 끄기' : '음성 인식 켜기'}
+              </button>
+            )}
+            <span className="grow present-interim">{speech.interim}</span>
+            <PageNav current={pageNo} total={lesson.pages.length} onChange={changePage} />
           </div>
-          {page.originalImageUrl && <img src={page.originalImageUrl} alt={`${page.index}쪽 원본`} />}
-          {page.originalText && <p style={{ fontSize: '1.1rem', lineHeight: 1.9 }}>{page.originalText}</p>}
-        </section>
+        )}
 
-        <section className="card stack">
-          <div className="card-title" style={{ marginBottom: 0 }}>
-            <Sparkles size={20} />
-            <h3>변환된 쉬운 설명</h3>
-            <span className="chip chip-blue count">{pageCaptions.items.length}개</span>
-          </div>
-
-          {speech.interim && (
-            <div className="interim">
-              <AudioLines size={17} /> {speech.interim}
-            </div>
-          )}
-
-          {pageCaptions.items.length === 0 ? (
-            <Empty icon={<Mic size={24} />}>
-              <span className="small">
-                설명을 시작하면 쉬운 문장으로 바뀌어
-                <br />이 페이지에 쌓여요.
-              </span>
-            </Empty>
-          ) : (
-            <CaptionList items={pageCaptions.items} hardWords={pageCaptions.hardWords} />
-          )}
-
-          {/* 마이크가 안 될 때·리플레이 모드 대비 수동 입력 */}
-          <form
-            className="composer"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const text = manual.trim();
-              if (text) send({ type: 'transcript', pageIndex: pageNo, text });
-              setManual('');
-            }}
-          >
-            <input
-              placeholder={isLive ? '설명을 직접 입력할 수도 있어요' : '수업 중에만 보낼 수 있어요'}
-              value={manual}
-              disabled={!isLive}
-              onChange={(e) => setManual(e.target.value)}
+        <div className={fs.on ? 'class-main' : 'live-grid'}>
+          <div className="class-main">
+            <SlideBoard
+              pageKey={pageNo}
+              imageUrl={page.originalImageUrl}
+              fallback={page.originalText}
+              alt={`${page.index}쪽 수업 자료`}
+              strokes={notes.strokesOf(pageNo)}
+              onStrokesChange={(strokes) => notes.setStrokes(pageNo, strokes)}
+              laser
+              onPointer={(pos) => isLive && send({ type: 'pointer', pageIndex: pageRef.current, pos })}
+              fill={fs.on}
+              toolbarEnd={
+                <>
+                  <SaveStateLabel state={notes.saveState} />
+                  <button className="tool-btn" onClick={fs.toggle} title={fs.on ? '전체화면 나가기' : '전체화면'} aria-label={fs.on ? '전체화면 나가기' : '전체화면'}>
+                    {fs.on ? <Minimize size={18} /> : <Maximize size={18} />}
+                  </button>
+                </>
+              }
             />
-            <button className="btn btn-primary btn-icon" aria-label="보내기" disabled={!isLive || !manual.trim()}>
-              <Send size={17} />
-            </button>
-          </form>
-        </section>
+            {!fs.on && <PageNav current={pageNo} total={lesson.pages.length} onChange={changePage} />}
+          </div>
+
+          {!fs.on && (
+            <section className="card stack live-side">
+              <div className="card-title" style={{ marginBottom: 0 }}>
+                <Sparkles size={20} />
+                <h3>변환된 쉬운 설명</h3>
+                <span className="chip chip-blue count">{pageCaptions.items.length}개</span>
+              </div>
+
+              {speech.interim && (
+                <div className="interim">
+                  <AudioLines size={17} /> {speech.interim}
+                </div>
+              )}
+
+              {pageCaptions.items.length === 0 ? (
+                <Empty icon={<Mic size={24} />}>
+                  <span className="small">
+                    설명을 시작하면 쉬운 문장으로 바뀌어
+                    <br />이 페이지에 쌓여요.
+                  </span>
+                </Empty>
+              ) : (
+                <CaptionList items={pageCaptions.items} hardWords={pageCaptions.hardWords} />
+              )}
+
+              {/* 마이크가 안 될 때·리플레이 모드 대비 수동 입력 */}
+              <form
+                className="composer"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const text = manual.trim();
+                  if (text) send({ type: 'transcript', pageIndex: pageNo, text });
+                  setManual('');
+                }}
+              >
+                <input
+                  placeholder={isLive ? '설명을 직접 입력할 수도 있어요' : '수업 중에만 보낼 수 있어요'}
+                  value={manual}
+                  disabled={!isLive}
+                  onChange={(e) => setManual(e.target.value)}
+                />
+                <button className="btn btn-primary btn-icon" aria-label="보내기" disabled={!isLive || !manual.trim()}>
+                  <Send size={17} />
+                </button>
+              </form>
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );

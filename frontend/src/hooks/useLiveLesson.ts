@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { connectLive, type LiveChannel } from '../api/realtime';
-import type { LessonStatus, PageCaptions, TeacherMessage } from '../api/types';
+import type { LessonStatus, PageCaptions, PointerPos, TeacherMessage } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 
 const EMPTY: PageCaptions = { items: [], hardWords: [] };
@@ -19,6 +19,7 @@ export function useLiveLesson(lessonId: string | undefined, role: 'teacher' | 's
   const [liveStatus, setLiveStatus] = useState<LessonStatus | null>(null); // lesson_started/ended로 바뀜
   const [serverError, setServerError] = useState<string | null>(null);
   const [rejected, setRejected] = useState<string | null>(null);
+  const [pointer, setPointer] = useState<{ pageIndex: number; pos: PointerPos } | null>(null); // 선생님 레이저
   const channel = useRef<LiveChannel | null>(null);
   const loaded = useRef(new Set<number>());
 
@@ -30,6 +31,10 @@ export function useLiveLesson(lessonId: string | undefined, role: 'teacher' | 's
       switch (msg.type) {
         case 'teacher_page':
           setTeacherPage(msg.pageIndex);
+          setPointer(null);
+          break;
+        case 'pointer':
+          setPointer(msg.pos ? { pageIndex: msg.pageIndex, pos: msg.pos } : null);
           break;
         case 'page_update':
           loaded.current.add(msg.pageIndex);
@@ -41,6 +46,7 @@ export function useLiveLesson(lessonId: string | undefined, role: 'teacher' | 's
           break;
         case 'lesson_ended':
           setLiveStatus('ended');
+          setPointer(null);
           break;
         case 'error':
           setServerError(msg.detail);
@@ -84,6 +90,8 @@ export function useLiveLesson(lessonId: string | undefined, role: 'teacher' | 's
     countOf: (pageIndex: number) => captions[pageIndex]?.items.length ?? 0,
     loadPage,
     teacherPage,
+    /** 선생님 레이저 위치 (그 페이지를 보고 있을 때만), 없으면 null */
+    pointerOn: (pageIndex: number): PointerPos => (pointer?.pageIndex === pageIndex ? pointer.pos : null),
     liveStatus,
     setLiveStatus,
     serverError,
