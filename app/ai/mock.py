@@ -42,6 +42,9 @@ class MockProvider(AIProvider):
         return {"easy_transcript": [{"text": f"선생님 말씀: {snippet}", "type": "content"}] if snippet else [],
                 "hard_words": []}
 
+    async def image_prompt(self, description: str) -> str:
+        return description.strip()
+
     async def explain_term(self, source_text: str, word: str) -> dict[str, Any]:
         return {"meaning": "수업에서 배우는 중요한 낱말이에요."}
 

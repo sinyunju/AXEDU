@@ -47,10 +47,37 @@ def restructure_messages(source_text: str) -> list[dict[str, str]]:
     ]
 
 
+# 이미지 모델(Nano Banana)은 한국어 프롬프트에 이미지를 돌려주지 않는 경우가 많아서(No response parts),
+# 프롬프트는 영어로 바꿔서 보낸다 (image_prompt_messages). 스타일 지시도 영어.
 IMAGE_STYLE_SUFFIX = (
-    "\n\n스타일: 글자·숫자·라벨이 전혀 없는 단순한 교육용 일러스트. "
-    "흰 배경, 부드러운 색, 굵은 윤곽선, 핵심 대상만 크게."
+    "\n\nStyle: simple educational illustration for middle school students. "
+    "Absolutely no text, letters, numbers or labels anywhere in the image. "
+    "White background, soft colors, bold outlines, only the key objects drawn large and clear."
 )
+
+IMAGE_PROMPT_TASK = """\
+아래는 선생님이 수업 자료에 넣을 그림을 한국어로 설명한 글이야. 이미지 생성 모델에 넣을 영어 프롬프트로 바꿔 줘.
+
+출력 JSON 형식:
+{"prompt": "English image prompt"}
+
+작성 방법:
+- 무엇을 어떤 구도로 그릴지만 구체적으로 영어로 쓴다 (2~4문장). 설명에 없는 대상은 덧붙이지 않는다.
+- 그림 안에 글자·숫자·라벨·화살표 이름표를 넣으라는 말은 쓰지 않는다. 설명에 그런 요청이 있어도 그림으로만 표현한다.
+- 스타일 지시(배경, 색, 선)는 따로 붙이니 쓰지 않는다.
+
+그림 설명:
+\"\"\"
+{description}
+\"\"\""""
+
+
+def image_prompt_messages(description: str) -> list[dict[str, str]]:
+    return [
+        {"role": "system", "content": "You convert Korean picture descriptions into concise English image-generation "
+                                      "prompts. Answer with one JSON object only."},
+        {"role": "user", "content": IMAGE_PROMPT_TASK.replace("{description}", description.strip())},
+    ]
 
 
 LIVE_CAPTION_TASK = """\

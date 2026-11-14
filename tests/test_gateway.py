@@ -130,7 +130,7 @@ def test_image_data_uri_and_request_format(caplog):
     body = json.loads(req.content)
     assert body["model"] == "gemini-nano-banana-2.1" and body["number_of_images"] == 1
     assert body["aspect_ratio"] == "1:1" and body["image_size"] == "1K"
-    assert body["prompt"].startswith("잎 그림") and "글자" in body["prompt"]
+    assert body["prompt"].startswith("잎 그림") and "no text" in body["prompt"]
 
     # 첫 응답 구조가 로그에 남되 base64 전체는 남지 않음
     logs = [r.getMessage() for r in caplog.records if "응답 구조" in r.getMessage()]
@@ -251,3 +251,36 @@ def test_explain_term_request():
     prompt = body["messages"][-1]["content"]
     assert "낱말: 엽록체" in prompt and "엽록체에서 광합성이 일어난다." in prompt
     assert "~해요" in body["messages"][0]["content"] or "해요" in body["messages"][0]["content"]
+
+
+def test_image_retries_once_on_empty_response():
+    calls = []
+    png = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"0" * 20).decode()
+
+    def handler(req):
+        calls.append(1)
+        if len(calls) == 1:
+            return httpx.Response(400, json={"detail": {"code": 9004, "message": "No response parts returned from Google API"}})
+        return httpx.Response(200, json={"data": [{"url": png}]})
+
+    assert asyncio.run(image_provider(handler).generate_image("leaf")).startswith(b"\x89PNG")
+    assert len(calls) == 2
+
+    calls.clear()
+    always = lambda req: (calls.append(1), httpx.Response(400, json={"detail": "No response parts"}))[1]
+    with pytest.raises(AIError):
+        asyncio.run(image_provider(always).generate_image("leaf"))
+    assert len(calls) == 2  # 한 번만 다시 시도
+
+
+def test_image_prompt_translation_request():
+    bodies = []
+
+    def handler(req):
+        bodies.append(json.loads(req.content))
+        return httpx.Response(200, json=completion('{"prompt": " A green leaf absorbing sunlight. "}'))
+
+    out = asyncio.run(text_provider(handler).image_prompt("햇빛을 받는 초록 잎"))
+    assert out == "A green leaf absorbing sunlight."
+    assert bodies[0]["model"] == "main" and bodies[0]["response_format"]["json_schema"]["name"] == "image_prompt"
+    assert "햇빛을 받는 초록 잎" in bodies[0]["messages"][-1]["content"]

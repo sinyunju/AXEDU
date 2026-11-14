@@ -15,10 +15,12 @@ from pydantic import BaseModel, ValidationError
 
 from app.ai.base import AIError, AIProvider, ImageProvider, image_extension
 from app.ai.prompts import (
-    IMAGE_STYLE_SUFFIX, chat_messages, live_caption_messages, quiz_messages, restructure_messages, term_messages,
+    IMAGE_STYLE_SUFFIX, chat_messages, image_prompt_messages, live_caption_messages, quiz_messages, restructure_messages,
+    term_messages,
 )
 from app.ai.schemas import (
-    CHAT_SCHEMA, LIVE_CAPTION_SCHEMA, QUIZ_SCHEMA, RESTRUCTURE_SCHEMA, TERM_SCHEMA, ChatOut, LiveCaptionOut, QuizOutRaw, TermOut,
+    CHAT_SCHEMA, IMAGE_PROMPT_SCHEMA, LIVE_CAPTION_SCHEMA, QUIZ_SCHEMA, RESTRUCTURE_SCHEMA, TERM_SCHEMA, ChatOut,
+    ImagePromptOut, LiveCaptionOut, QuizOutRaw, TermOut,
     RestructureOut,
 )
 
@@ -101,6 +103,11 @@ class GatewayTextProvider(AIProvider):
                                      live_caption_messages(source_text, transcript, previous_easy, context),
                                      LIVE_CAPTION_SCHEMA, LiveCaptionOut)
 
+    async def image_prompt(self, description: str) -> str:
+        out = await self._json_call(self.model_main, image_prompt_messages(description), IMAGE_PROMPT_SCHEMA,
+                                    ImagePromptOut)
+        return out["prompt"].strip()
+
     async def explain_term(self, source_text: str, word: str) -> dict[str, Any]:
         out = await self._json_call(self.model_main, term_messages(source_text, word), TERM_SCHEMA, TermOut)
         return {"meaning": out["meaning"].strip()}
@@ -152,10 +159,16 @@ class GatewayImageProvider(ImageProvider):
             "aspect_ratio": self.aspect_ratio,
             "image_size": self.image_size,
         }
-        try:
-            resp = await self._client.post(self.url, json=body)
-        except httpx.HTTPError as e:
-            raise AIError(f"이미지 생성 요청 실패: {e!r}") from e
+        for attempt in range(2):
+            try:
+                resp = await self._client.post(self.url, json=body)
+            except httpx.HTTPError as e:
+                raise AIError(f"이미지 생성 요청 실패: {e!r}") from e
+            # 모델이 이미지 없이 답하면 Gateway가 400 "No response parts"를 준다. 가끔 일어나므로 한 번 더 시도
+            if resp.status_code == 400 and "No response parts" in resp.text and attempt == 0:
+                logger.info("이미지 응답이 비어 있어 한 번 더 시도")
+                continue
+            break
         if resp.status_code >= 400:
             raise AIError(f"이미지 생성 실패 (HTTP {resp.status_code}): {resp.text[:500]}")
         try:

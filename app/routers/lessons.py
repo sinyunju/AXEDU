@@ -256,6 +256,7 @@ async def generate_page_image(
     lesson_id: int, page_no: int, body: ImageRequest | None = None,
     session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
     image_provider: ImageProvider = Depends(get_image_provider),
+    provider: AIProvider = Depends(get_ai_provider),
 ) -> PageOut:
     lesson = get_owned_lesson(session, lesson_id, teacher)
     _ensure_not_generating(lesson)
@@ -268,7 +269,12 @@ async def generate_page_image(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "AI 제안 프롬프트가 없습니다. prompt를 직접 입력해 주세요")
 
     try:
-        image = await image_provider.generate_image(prompt)
+        english = await provider.image_prompt(prompt)  # 이미지 모델은 한국어 프롬프트에 이미지를 잘 안 돌려줌
+    except AIError as e:
+        logger.warning("이미지 프롬프트 번역 실패, 원문으로 시도: %s", e)
+        english = prompt
+    try:
+        image = await image_provider.generate_image(english)
     except AIError as e:
         logger.warning("이미지 생성 실패 lesson=%s page=%s: %s", lesson_id, page_no, e)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "이미지를 만들지 못했습니다. 잠시 후 다시 시도해 주세요")

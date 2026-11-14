@@ -39,6 +39,10 @@ class AIProvider(ABC):
         """
 
     @abstractmethod
+    async def image_prompt(self, description: str) -> str:
+        """교사가 한국어로 쓴 그림 설명 → 이미지 모델용 영어 프롬프트."""
+
+    @abstractmethod
     async def explain_term(self, source_text: str, word: str) -> dict[str, Any]:
         """페이지 글을 문맥으로 낱말의 쉬운 뜻. → {meaning}"""
 

@@ -233,3 +233,41 @@ def test_generation_finishes_even_if_status_was_recovered_meanwhile(client, sess
     with S(get_engine()) as s:
         lesson = s.get(Lesson, ctx["lesson_id"])
         assert lesson.status == LessonStatus.ready and lesson.progress == 100
+
+
+def test_image_prompt_is_translated_before_generation(client, ctx):
+    """이미지 모델에는 영어로 바꾼 프롬프트를 보내고, 교사에게 보이는 제안 프롬프트는 한국어 그대로."""
+    from app.ai import get_ai_provider
+    from app.ai.mock import MockProvider
+
+    generate(client, ctx)
+    sent = []
+
+    class Translating(MockProvider):
+        async def image_prompt(self, description):
+            return f"EN: {description}"
+
+    class Recording(ImageProvider):
+        async def generate_image(self, prompt):
+            sent.append(prompt)
+            return b"\x89PNG\r\n\x1a\n" + b"0" * 20
+
+    class BrokenTranslator(MockProvider):
+        async def image_prompt(self, description):
+            raise AIError("down")
+
+    client.app.dependency_overrides[get_ai_provider] = lambda: Translating()
+    client.app.dependency_overrides[get_image_provider] = lambda: Recording()
+    try:
+        base = f"/lessons/{ctx['lesson_id']}/pages"
+        r = client.post(f"{base}/2/image", json={"prompt": "초록 잎"}, headers=ctx["t1"]["headers"])
+        assert r.status_code == 200
+        assert sent == ["EN: 초록 잎"]
+        assert r.json()["image_suggestion"]["prompt"] == "초록 잎"
+        # 번역이 실패해도 원문으로 시도
+        client.app.dependency_overrides[get_ai_provider] = lambda: BrokenTranslator()
+        assert client.post(f"{base}/2/image", json={"prompt": "초록 잎"}, headers=ctx["t1"]["headers"]).status_code == 200
+        assert sent[-1] == "초록 잎"
+    finally:
+        client.app.dependency_overrides.pop(get_ai_provider, None)
+        client.app.dependency_overrides.pop(get_image_provider, None)

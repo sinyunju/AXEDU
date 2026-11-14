@@ -169,6 +169,21 @@ CHAT_SCHEMA = strict_json_schema(
 )
 
 
+class ImagePromptOut(_Strict):
+    prompt: str = Field(min_length=1)
+
+
+IMAGE_PROMPT_SCHEMA = strict_json_schema(
+    "image_prompt",
+    {
+        "type": "object",
+        "properties": {"prompt": {"type": "string"}},
+        "required": ["prompt"],
+        "additionalProperties": False,
+    },
+)
+
+
 class TermOut(_Strict):
     meaning: str = Field(min_length=1)
 
