@@ -56,9 +56,11 @@ npm run dev                  # http://localhost:5173 (같은 Wi-Fi 기기는 htt
 
 1. 백엔드 실행 (백엔드 README "로컬 실행" — seed 포함)
 2. `.env.local`에서 `VITE_USE_MOCK=false`
-3. 휴대폰·태블릿에서 접속하려면
-   - `VITE_API_BASE_URL=http://PC의IP:8000`, `VITE_WS_BASE_URL=ws://PC의IP:8000`
-   - 백엔드 `.env`의 `FRONTEND_ORIGINS`에 `http://PC의IP:5173` 추가 (안 하면 CORS로 막힘)
+3. 백엔드 주소는 `VITE_API_BASE_URL=auto`, `VITE_WS_BASE_URL=auto`(기본값)로 두면 **접속한 주소의 8000번 포트**를 씁니다.
+   - PC에서 `http://localhost:5173` → `http://localhost:8000`, 아이패드에서 `http://PC의IP:5173` → `http://PC의IP:8000`
+   - 와이파이가 바뀌어 PC의 IP가 달라져도 `.env.local`은 고칠 필요가 없습니다.
+   - 휴대폰·태블릿에서 열 때는 백엔드 `.env`의 `FRONTEND_ORIGINS`에 `http://PC의IP:5173`을 추가하고 백엔드를 다시 시작하세요 (안 하면 CORS로 막힘).
+   - 백엔드가 다른 컴퓨터·포트에 있으면 `auto` 대신 주소를 직접 적으면 됩니다.
 4. 스키마 타입 다시 만들기: `npm run gen:api` → `src/api/backend.d.ts`
 
 > `src/api/backend.d.ts`는 저장소의 `docs/openapi.json`(백엔드에서 `python -m scripts.export_openapi`로 갱신)으로 만든 파일입니다 (`npm run gen:api`).
@@ -129,6 +131,7 @@ Vercel 프로젝트 설정 → Environment Variables에 아래를 **반드시** 
 
 - 백엔드 `.env`의 `FRONTEND_ORIGINS`에 Vercel 도메인(예: `https://xxx.vercel.app`)을 추가하고 백엔드를 다시 시작하세요. 안 하면 CORS로 막힙니다.
 - `VITE_` 값은 빌드할 때 코드에 박히므로, 바꾼 뒤에는 꼭 다시 배포해야 반영됩니다.
+- 배포에서는 `VITE_API_BASE_URL`/`VITE_WS_BASE_URL`을 `auto`로 두지 마세요. `auto`는 "프론트와 같은 주소의 8000번 포트"라서, 백엔드가 다른 주소에 있는 배포 환경에서는 연결되지 않습니다.
 - 음성 인식(마이크)은 https 주소에서만 동작합니다 (localhost 제외).
 
 ## 화면 테마
