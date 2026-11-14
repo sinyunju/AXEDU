@@ -2,6 +2,7 @@
 // - 패널 너비는 가운데 손잡이를 끌어서 조절 (이 브라우저에 기억)
 // - 전체화면에서도 설명 패널은 오른쪽에 그대로 보임
 // - 선생님이 레이저를 쓰면 같은 페이지를 보고 있을 때 빨간 점으로 보임
+// - 집중 도우미(학생이 켬): 웹캠으로 화면을 안 보는 시간이 길면 "집중!" 알림 + 토끼 (이 기기 안에서만 분석)
 import {
   BookOpenText,
   CheckCircle2,
@@ -19,6 +20,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../../api';
 import { CaptionList } from '../../components/CaptionList';
 import { EasyText } from '../../components/EasyText';
+import { FocusAlert, FocusError, FocusPreview, FocusToggle } from '../../components/FocusGuard';
 import { PageNav } from '../../components/PageNav';
 import { SaveStateLabel } from '../../components/SaveStateLabel';
 import { SlideBoard } from '../../components/SlideBoard';
@@ -27,6 +29,7 @@ import { useAnnotations } from '../../hooks/useAnnotations';
 import { useAsync } from '../../hooks/useAsync';
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useFitToViewport } from '../../hooks/useFitToViewport';
+import { useFocusGuard } from '../../hooks/useFocusGuard';
 import { useFollowBottom } from '../../hooks/useFollowBottom';
 import { useLiveLesson } from '../../hooks/useLiveLesson';
 import { usePageKeys } from '../../hooks/usePageKeys';
@@ -54,6 +57,7 @@ export function StudentClass() {
   const presentRef = useRef<HTMLDivElement>(null);
   const splitRef = useRef<HTMLDivElement>(null);
   const fs = useFullscreen(presentRef);
+  const guard = useFocusGuard();
   const { loadPage } = live;
   const total = lesson?.pages.length ?? 0;
   const captionScroll = useFollowBottom(pageNo, live.countOf(pageNo));
@@ -117,11 +121,13 @@ export function StudentClass() {
         <span className="grow">
           {lesson.sessionNo}회차 · {lesson.title}
         </span>
+        <FocusToggle guard={guard} />
         <span className="divider" />
         <span>
           {pageNo} / {lesson.pages.length}
         </span>
       </div>
+      <FocusError guard={guard} />
 
       {status === 'ended' && (
         <div className="ended-banner">
@@ -140,6 +146,7 @@ export function StudentClass() {
             <strong className="grow">
               {lesson.sessionNo}회차 · {lesson.title}
             </strong>
+            <FocusToggle guard={guard} compact />
             <PageNav current={pageNo} total={lesson.pages.length} onChange={setPageNo} />
           </div>
         )}
@@ -261,6 +268,10 @@ export function StudentClass() {
             <span className="live-dot" /> 선생님은 지금 {teacherPage}쪽 · 따라가기
           </button>
         )}
+
+        {/* 전체화면에서도 보이도록 present 안에 둠 */}
+        <FocusPreview guard={guard} />
+        <FocusAlert guard={guard} />
       </div>
 
       <div className="action-grid" style={{ marginTop: 8 }}>
