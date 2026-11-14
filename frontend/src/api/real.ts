@@ -3,6 +3,7 @@ import type { components } from './backend';
 import { ApiError, fileUrl, http } from './http';
 import type {
   AuthResponse,
+  CalendarEvent,
   CalendarResponse,
   ChatMessage,
   ChatReply,
@@ -27,6 +28,21 @@ import type {
 type S = components['schemas'];
 
 const post = (body?: unknown) => ({ method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
+
+/**
+ * 캘린더용: 내 과목 전체의 상세(회차 목록 포함).
+ * 캘린더는 달 범위·다가오는 일정을 동시에 부르므로, 10초 동안은 같은 결과를 다시 씀 (요청이 과목 수만큼 늘어나서)
+ */
+let detailsCache: { at: number; data: Promise<S['CourseDetail'][]> } | null = null;
+function courseDetails(): Promise<S['CourseDetail'][]> {
+  if (detailsCache && Date.now() - detailsCache.at < 10_000) return detailsCache.data;
+  const data = http<S['CourseOut'][]>('/courses').then((list) =>
+    Promise.all(list.map((c) => http<S['CourseDetail']>(`/courses/${c.id}`))),
+  );
+  detailsCache = { at: Date.now(), data };
+  data.catch(() => (detailsCache = null)); // 실패하면 다음에 다시 시도
+  return data;
+}
 const notSupported = (what: string) => () => Promise.reject(new ApiError(501, `${what}은(는) 아직 서버에서 지원하지 않아요`));
 
 // ---------- 변환 ----------
@@ -171,7 +187,36 @@ export const realApi = {
   updateMe: notSupported('내 정보 수정') as (input: ProfileInput) => Promise<User>,
   uploadAvatar: notSupported('프로필 사진') as (file: Blob) => Promise<{ avatarUrl: string }>,
   changePassword: notSupported('비밀번호 변경') as (current: string, next: string) => Promise<void>,
-  getCalendar: notSupported('일정') as (from: string, to: string) => Promise<CalendarResponse>,
+  /**
+   * 캘린더: 백엔드에 일정 API가 아직 없어서, 과목별 회차의 수업 날짜(class_date)로 "내 수업 일정"만 만듦.
+   * 학사 일정(시험·행사)은 슈퍼스쿨 연동 API가 생기면 GET /calendar로 바꿀 것.
+   * 학생에게는 백엔드가 승인된 회차만 주므로 그대로 쓰면 됨.
+   */
+  async getCalendar(from: string, to: string): Promise<CalendarResponse> {
+    const fromT = new Date(from).getTime();
+    const toT = new Date(to).getTime();
+    const events: CalendarEvent[] = [];
+    for (const c of await courseDetails()) {
+      for (const l of c.lessons) {
+        if (!l.class_date) continue;
+        const start = new Date(`${l.class_date}T00:00:00`); // 그날 0시 (로컬)
+        if (start.getTime() < fromT || start.getTime() >= toT) continue;
+        events.push({
+          id: `lesson-${l.id}`,
+          title: `${l.session_no}회차 ${l.title}`,
+          start: start.toISOString(),
+          allDay: true,
+          source: 'lesson',
+          category: '수업',
+          lessonId: String(l.id),
+          lessonStatus: STATUS[l.status],
+          courseName: c.name,
+        });
+      }
+    }
+    events.sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+    return { superschoolLinked: false, events };
+  },
   explainTerm: notSupported('낱말 뜻 만들기') as (lessonId: string, pageIndex: number, word: string) => Promise<{ meaning: string }>,
 
   // 과목

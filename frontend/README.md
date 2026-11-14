@@ -114,10 +114,13 @@ src/api/
 
 | 기능 | 키 |
 |---|---|
-| 슈퍼스쿨 로그인·계정 연동 | `superschool` |
-| 메인 화면 캘린더 | `calendar` |
+| 슈퍼스쿨 로그인·계정 연동, 캘린더의 학사 일정(시험·행사·휴업일) | `superschool` |
 | 이름·이메일 수정, 프로필 사진, 비밀번호 변경 | `profileEdit` |
 | 단어를 넣으면 AI가 뜻 채우기 | `explainTerm` |
+
+**메인 화면 캘린더**(`calendar`)는 실서버에서도 보입니다. 일정 API가 아직 없어서, `real.ts`의 `getCalendar`가
+`GET /courses` + 과목별 `GET /courses/{id}`의 회차 `class_date`로 "내 수업 일정"만 만듭니다 (수업 날짜가 없는 회차는 안 나옴).
+백엔드에 `GET /calendar`가 생기면 그걸 부르도록 바꾸면 됩니다.
 
 ## 배포 (Vercel)
 
