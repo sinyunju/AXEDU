@@ -20,12 +20,21 @@ const FATAL_ERRORS: Record<string, string> = {
   'audio-capture': '마이크를 찾을 수 없어요. 마이크 연결을 확인해 주세요.',
 };
 
+// 인터넷이 끊기면(network) 크롬이 바로 끝내 버리므로, 잠시 기다렸다 다시 시작하고 계속 실패하면 멈춤
+const NETWORK_RETRY_MS = 1500;
+const NETWORK_MAX_FAILURES = 3;
+const NETWORK_MESSAGE = '인터넷 연결을 확인해 주세요. 음성 인식이 멈췄어요. 연결되면 다시 켜 주세요.';
+
 export function useSpeechRecognition<T>(onFinal: (text: string, tag: T) => void, getTag: () => T) {
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState('');
   const [error, setError] = useState('');
   const recRef = useRef<any>(null);
   const wantRef = useRef(false);
+  const runningRef = useRef(false); // 지금 인식 세션이 돌고 있음 (다시 시작을 기다리는 중이면 false)
+  const failuresRef = useRef(0); // 연속 network 오류 횟수 (말을 알아들으면 0으로)
+  const retryDelayRef = useRef(0); // 다음 재시작 전 대기 시간
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const tagsRef = useRef(new Map<number, T>()); // result index → 말하기 시작할 때의 tag
   const flushTagRef = useRef<{ tag: T } | null>(null); // flush() 뒤 세션이 끝날 때까지 나오는 말의 tag
   const onFinalRef = useRef(onFinal);
@@ -42,6 +51,7 @@ export function useSpeechRecognition<T>(onFinal: (text: string, tag: T) => void,
     rec.continuous = true;
     rec.interimResults = true;
     rec.onresult = (e: any) => {
+      failuresRef.current = 0;
       let partial = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
@@ -58,43 +68,67 @@ export function useSpeechRecognition<T>(onFinal: (text: string, tag: T) => void,
       if (message) {
         wantRef.current = false; // onend에서 다시 시작하지 않음
         setError(message);
+      } else if (e.error === 'network') {
+        failuresRef.current += 1;
+        if (failuresRef.current >= NETWORK_MAX_FAILURES) {
+          wantRef.current = false;
+          setError(NETWORK_MESSAGE);
+        } else retryDelayRef.current = NETWORK_RETRY_MS;
       }
-      // no-speech, network, aborted 등은 onend에서 다시 시작
+      // no-speech(침묵), aborted 등은 onend에서 바로 다시 시작
+    };
+    const finish = () => {
+      recRef.current = null;
+      wantRef.current = false;
+      setListening(false);
+    };
+    const restart = () => {
+      if (!wantRef.current) return finish(); // 기다리는 사이 꺼짐
+      try {
+        rec.start();
+        runningRef.current = true;
+      } catch {
+        finish(); // 시작할 수 없는 상태
+      }
     };
     // 크롬은 침묵이 길거나 flush()로 멈추면 끝나므로, 켜 둔 상태면 다시 시작
     rec.onend = () => {
       tagsRef.current.clear(); // 새 세션은 result index가 0부터 다시 시작
       flushTagRef.current = null;
       setInterim('');
-      if (wantRef.current) {
-        try {
-          rec.start();
-          return;
-        } catch {
-          // 이미 시작됐거나 시작할 수 없는 상태 → 끔
-        }
-      }
-      recRef.current = null;
-      wantRef.current = false;
-      setListening(false);
+      runningRef.current = false;
+      if (!wantRef.current) return finish();
+      const delay = retryDelayRef.current;
+      retryDelayRef.current = 0;
+      if (delay) retryTimer.current = setTimeout(restart, delay);
+      else restart();
     };
     recRef.current = rec;
     wantRef.current = true;
+    failuresRef.current = 0;
+    retryDelayRef.current = 0;
     setError('');
     rec.start();
+    runningRef.current = true;
     setListening(true);
   }, [supported]);
 
   const stop = useCallback(() => {
     wantRef.current = false;
-    recRef.current?.stop();
     setInterim('');
+    if (runningRef.current) recRef.current?.stop(); // onend에서 정리
+    else if (recRef.current) {
+      // 재시작을 기다리는 중이면 바로 정리
+      clearTimeout(retryTimer.current);
+      recRef.current = null;
+      setListening(false);
+    }
   }, []);
 
   /** 지금까지 들은 말을 확정시킨다. stop()하면 남은 말이 final로 나오고, onend에서 다시 시작된다. */
   // 페이지 번호를 바꾸기 *전에* 호출해야 한다: 넘기기 직전에 한 말(아직 인식 결과가 안 온 말)도 이전 tag로 간다.
   const flush = useCallback(() => {
-    if (!wantRef.current || !recRef.current) return;
+    if (!wantRef.current || !runningRef.current || !recRef.current) return; // 재시작 대기 중이면 확정할 말이 없음
     if (!flushTagRef.current) flushTagRef.current = { tag: getTagRef.current() };
     recRef.current.stop();
   }, []);

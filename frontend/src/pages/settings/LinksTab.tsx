@@ -39,7 +39,7 @@ export function LinksTab() {
             )}
           </div>
           {user.superschoolLinked && user.school && <span className="muted small">{user.school}</span>}
-          <p className="muted small">연결하면 이런 정보를 가져와요. 비밀번호는 천천히에 저장되지 않아요.</p>
+          <p className="muted small">연결하면 이런 정보를 가져와요. 비밀번호는 토끼와 거북이에 저장되지 않아요.</p>
           <ul className="link-scope">
             <li>
               <CalendarDays size={16} /> 학사 일정 (시험, 행사, 휴업일) — 메인 화면 일정에 표시

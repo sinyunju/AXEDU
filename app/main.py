@@ -47,7 +47,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     settings.storage_dir.mkdir(parents=True, exist_ok=True)
 
-    app = FastAPI(title="쉬운수업 API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="토끼와 거북이 API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

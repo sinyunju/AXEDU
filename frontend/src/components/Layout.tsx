@@ -1,4 +1,5 @@
-import { ChevronDown, Link2, LogOut, Palette, Sprout, UserRound } from 'lucide-react';
+import { ChevronDown, Link2, LogOut, Palette, UserRound } from 'lucide-react';
+import { TurtleMark } from './TurtleMark';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { displayName, homeFor, useAuth } from '../auth/AuthContext';
@@ -88,9 +89,9 @@ export function Layout() {
         <div className="topbar-inner">
           <Link to={user ? homeFor(user.role) : '/'} className="brand">
             <span className="brand-mark">
-              <Sprout size={19} strokeWidth={2.4} />
+              <TurtleMark size={22} />
             </span>
-            천천히
+            토끼와 거북이
           </Link>
           {config.useMock && <span className="chip chip-warn">목 데이터</span>}
           <div className="topbar-user">

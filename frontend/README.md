@@ -1,4 +1,4 @@
-# 천천히 — 프론트엔드
+# 토끼와 거북이 — 프론트엔드
 
 React 19 + Vite + TypeScript + React Router. 기능 정의는 상위 폴더의 `최종_기능_정리.md`,
 백엔드 연동은 백엔드 저장소(sinyunju/AXEDU)의 README와 `/docs`를 따릅니다.
@@ -116,6 +116,20 @@ src/api/
 | 메인 화면 캘린더 | `calendar` |
 | 이름·이메일 수정, 프로필 사진, 비밀번호 변경 | `profileEdit` |
 | 단어를 넣으면 AI가 뜻 채우기 | `explainTerm` |
+
+## 배포 (Vercel)
+
+Vercel 프로젝트 설정 → Environment Variables에 아래를 **반드시** 넣고 다시 배포하세요.
+
+| 이름 | 값 |
+|---|---|
+| `VITE_USE_MOCK` | `false` ← 빠뜨리면 기본값(`true`)으로 목 모드가 되어 가짜 데이터 화면이 뜹니다 |
+| `VITE_API_BASE_URL` | `https://(백엔드 주소)` |
+| `VITE_WS_BASE_URL` | `wss://(백엔드 주소)` (https 페이지에서는 `ws://`가 막힘) |
+
+- 백엔드 `.env`의 `FRONTEND_ORIGINS`에 Vercel 도메인(예: `https://xxx.vercel.app`)을 추가하고 백엔드를 다시 시작하세요. 안 하면 CORS로 막힙니다.
+- `VITE_` 값은 빌드할 때 코드에 박히므로, 바꾼 뒤에는 꼭 다시 배포해야 반영됩니다.
+- 음성 인식(마이크)은 https 주소에서만 동작합니다 (localhost 제외).
 
 ## 화면 테마
 

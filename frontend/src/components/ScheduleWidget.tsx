@@ -1,4 +1,4 @@
-// 메인 화면 일정: 슈퍼스쿨 학사 일정 + 천천히 수업. 주/월 보기를 고를 수 있음
+// 메인 화면 일정: 슈퍼스쿨 학사 일정 + 토끼와 거북이 수업. 주/월 보기를 고를 수 있음
 import { ArrowLeft, ArrowRight, CalendarDays, CalendarRange, ChevronRight, Clock, School } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';

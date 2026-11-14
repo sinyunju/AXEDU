@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "쉬운수업 API",
+    "title": "토끼와 거북이 API",
     "version": "0.1.0"
   },
   "paths": {

@@ -1,5 +1,6 @@
 // 회원가입 (학생 / 선생님 선택). 가입하면 바로 로그인되어 역할별 첫 화면으로 이동
-import { GraduationCap, Presentation, Sprout } from 'lucide-react';
+import { GraduationCap, Presentation } from 'lucide-react';
+import { TurtleMark } from '../components/TurtleMark';
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { Role } from '../api/types';
@@ -54,9 +55,9 @@ export function Signup() {
       <form className="card auth-card stack" onSubmit={onSubmit}>
         <div className="auth-head">
           <span className="brand-mark">
-            <Sprout size={26} strokeWidth={2.4} />
+            <TurtleMark size={30} />
           </span>
-          <h2>천천히와 함께 시작해요</h2>
+          <h2>토끼와 거북이에 오신 걸 환영해요</h2>
         </div>
 
         <Segmented ariaLabel="가입 유형" kind="radio" options={roles} value={role} onChange={setRole} />

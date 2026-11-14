@@ -1,5 +1,5 @@
 // 로그인 (교사·학생 공용. 계정의 역할에 따라 첫 화면이 달라짐)
-import { Sprout } from 'lucide-react';
+import { TurtleMark } from '../components/TurtleMark';
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { Role } from '../api/types';
@@ -38,7 +38,7 @@ export function Login() {
       <form className="card auth-card stack" onSubmit={onSubmit}>
         <div className="auth-head">
           <span className="brand-mark">
-            <Sprout size={26} strokeWidth={2.4} />
+            <TurtleMark size={30} />
           </span>
           <h2>다시 만나서 반가워요</h2>
           <p className="muted">아이디와 비밀번호로 로그인해 주세요</p>

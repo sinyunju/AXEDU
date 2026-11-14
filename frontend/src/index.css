@@ -1,5 +1,5 @@
 /* =========================================================
-   천천히 디자인 시스템
+   토끼와 거북이 디자인 시스템
    - 흰 카드 + 큰 라운드 + 알약 버튼
    - 테마: 파랑(기본) · 핑크 · 노랑 · 다크, 또는 시스템 설정 따르기
      <html data-theme="blue|pink|yellow|dark">, 속성이 없으면 시스템(파랑/다크 자동)
@@ -202,6 +202,7 @@ strong, b { font-weight: 620; }
   width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
   background: linear-gradient(135deg, var(--grad-start), var(--primary) 55%, var(--grad-end));
   color: var(--on-primary); box-shadow: var(--shadow-primary);
+  --turtle-cut: var(--primary); /* 로고 등껍질 무늬 색 = 바탕색 */
 }
 .topbar-user { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .user-name { font-weight: 560; font-size: 0.95rem; color: var(--text-2); }
