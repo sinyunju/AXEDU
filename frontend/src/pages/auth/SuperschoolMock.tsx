@@ -1,4 +1,4 @@
-// 목 모드 전용: 슈퍼스쿨 인증 화면 대신 쓰는 앱 안 화면.
+// 개발용 슈퍼스쿨 인증 화면 (프론트 목 모드, 또는 백엔드 SUPERSCHOOL_MOCK=true일 때).
 // 실제 슈퍼스쿨 화면을 흉내 내지 않고, 개발용이라는 것을 분명히 표시합니다.
 import { FlaskConical, GraduationCap, Presentation } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -23,7 +23,7 @@ export function SuperschoolMock() {
           </div>
           <h3>개발용 연동 화면</h3>
           <p className="muted small">
-            목 모드에서는 실제 슈퍼스쿨에 접속하지 않아요. 실서버에서는 이 자리에 슈퍼스쿨 로그인·동의 화면이 나와요.
+            지금은 실제 슈퍼스쿨에 접속하지 않아요. 슈퍼스쿨 API를 연결하면 이 자리에 슈퍼스쿨 로그인·동의 화면이 나와요.
           </p>
         </div>
 

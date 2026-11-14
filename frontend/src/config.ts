@@ -21,13 +21,11 @@ export const config = {
   wsBaseUrl: backendUrl(import.meta.env.VITE_WS_BASE_URL, 'ws'),
 };
 
-/**
- * 백엔드에 아직 없는 기능은 목 모드에서만 보여줌.
- * 백엔드에 API가 생기면 해당 값을 true로 바꾸고 api/index.ts에 연결하면 됩니다.
- */
+/** 목 모드와 실서버에서 다르게 보이는 기능 */
 export const features = {
-  superschool: useMock, // 슈퍼스쿨 로그인·연동
-  calendar: true, // 메인 화면 일정 (실서버는 회차의 수업 날짜만, 학사 일정은 슈퍼스쿨 연동 후)
-  profileEdit: useMock, // 이름·이메일 수정, 프로필 사진, 비밀번호 변경
-  explainTerm: useMock, // 단어를 넣으면 AI가 뜻 채우기
+  superschool: true, // 슈퍼스쿨 로그인·연동 (실서버: 백엔드 SUPERSCHOOL_MOCK에 따라 가짜/실제)
+  calendar: true, // 메인 화면 일정 (수업 날짜 + 슈퍼스쿨 학사 일정)
+  profileEdit: true, // 이름 수정, 프로필 사진, 비밀번호 변경
+  profileEmail: useMock, // 이메일은 백엔드에 저장하지 않음 (목 모드에서만 보임)
+  explainTerm: true, // 단어를 넣으면 AI가 뜻 채우기
 };

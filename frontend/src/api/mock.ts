@@ -421,7 +421,7 @@ export const mockApi: Api & {
     return publicUser(currentUser());
   },
 
-  // 슈퍼스쿨 연동 (목 모드 전용)
+  // 슈퍼스쿨 연동
   superschoolAuthorizeUrl(mode: 'login' | 'link', role?: User['role']) {
     const q = new URLSearchParams({ mode, ...(role ? { role } : {}) });
     return `/auth/superschool/mock?${q}`;
@@ -445,7 +445,7 @@ export const mockApi: Api & {
     return publicUser(patchUser(currentUser().id, { superschoolLinked: false, school: undefined }));
   },
 
-  // 프로필 (목 모드 전용)
+  // 프로필
   async updateMe(input: ProfileInput): Promise<User> {
     await delay();
     const patch: Partial<MockUser> = { ...input, avatarUrl: input.avatarUrl ?? undefined };
@@ -465,7 +465,7 @@ export const mockApi: Api & {
     patchUser(u.id, { password: next });
   },
 
-  // 캘린더 (목 모드 전용)
+  // 캘린더
   async getCalendar(from: string, to: string): Promise<CalendarResponse> {
     await delay();
     const u = currentUser();

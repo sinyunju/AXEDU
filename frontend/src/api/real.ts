@@ -1,6 +1,7 @@
 // 실서버(FastAPI) 연동. 백엔드 형식(backend.d.ts) ↔ 화면 형식(types.ts) 변환은 모두 여기서 합니다.
 import type { components } from './backend';
 import { ApiError, fileUrl, http } from './http';
+import { config } from '../config';
 import type {
   AuthResponse,
   CalendarEvent,
@@ -31,21 +32,6 @@ type S = components['schemas'];
 
 const post = (body?: unknown) => ({ method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) });
 
-/**
- * 캘린더용: 내 과목 전체의 상세(회차 목록 포함).
- * 캘린더는 달 범위·다가오는 일정을 동시에 부르므로, 10초 동안은 같은 결과를 다시 씀 (요청이 과목 수만큼 늘어나서)
- */
-let detailsCache: { at: number; data: Promise<S['CourseDetail'][]> } | null = null;
-function courseDetails(): Promise<S['CourseDetail'][]> {
-  if (detailsCache && Date.now() - detailsCache.at < 10_000) return detailsCache.data;
-  const data = http<S['CourseOut'][]>('/courses').then((list) =>
-    Promise.all(list.map((c) => http<S['CourseDetail']>(`/courses/${c.id}`))),
-  );
-  detailsCache = { at: Date.now(), data };
-  data.catch(() => (detailsCache = null)); // 실패하면 다음에 다시 시도
-  return data;
-}
-const notSupported = (what: string) => () => Promise.reject(new ApiError(501, `${what}은(는) 아직 서버에서 지원하지 않아요`));
 
 // ---------- 변환 ----------
 
@@ -59,8 +45,30 @@ const STATUS: Record<S['LessonStatus'], LessonStatus> = {
 };
 
 function toUser(u: S['UserOut'] | S['UserBrief']): User {
-  return { id: String(u.id), role: u.role, username: u.login_id, name: u.name, superschoolLinked: false };
+  return {
+    id: String(u.id),
+    role: u.role,
+    username: u.login_id,
+    name: u.name,
+    avatarUrl: fileUrl(u.avatar_url),
+    school: u.school ?? undefined,
+    superschoolLinked: u.superschool_linked ?? false,
+  };
 }
+
+/** 백엔드 날짜(YYYY-MM-DD = 그날 하루 종일)를 화면 형식(그날 0시 로컬의 ISO)으로 */
+function toLocalIso(value: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`).toISOString() : new Date(value).toISOString();
+}
+
+/** ISO → 로컬 기준 YYYY-MM-DD */
+function localDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** 슈퍼스쿨이 돌려보낼 프론트 주소 (백엔드 FRONTEND_ORIGINS에 이 origin이 있어야 함) */
+const superschoolRedirectUri = () => `${window.location.origin}/auth/superschool/callback`;
 
 function toCourse(c: S['CourseOut'], lessonCount?: number): Course {
   return {
@@ -181,45 +189,66 @@ export const realApi = {
   },
   me: async (): Promise<User> => toUser(await http<S['UserOut']>('/auth/me')),
 
-  // 백엔드에 없는 기능 (화면에서는 features로 숨김)
-  superschoolAuthorizeUrl: (_mode: 'login' | 'link', _role?: Role): string => '/login',
-  superschoolLogin: notSupported('슈퍼스쿨 로그인') as (code: string) => Promise<AuthResponse>,
-  linkSuperschool: notSupported('슈퍼스쿨 연동') as (code: string) => Promise<User>,
-  unlinkSuperschool: notSupported('슈퍼스쿨 연동') as () => Promise<User>,
-  updateMe: notSupported('내 정보 수정') as (input: ProfileInput) => Promise<User>,
-  uploadAvatar: notSupported('프로필 사진') as (file: Blob) => Promise<{ avatarUrl: string }>,
-  changePassword: notSupported('비밀번호 변경') as (current: string, next: string) => Promise<void>,
-  /**
-   * 캘린더: 백엔드에 일정 API가 아직 없어서, 과목별 회차의 수업 날짜(class_date)로 "내 수업 일정"만 만듦.
-   * 학사 일정(시험·행사)은 슈퍼스쿨 연동 API가 생기면 GET /calendar로 바꿀 것.
-   * 학생에게는 백엔드가 승인된 회차만 주므로 그대로 쓰면 됨.
-   */
-  async getCalendar(from: string, to: string): Promise<CalendarResponse> {
-    const fromT = new Date(from).getTime();
-    const toT = new Date(to).getTime();
-    const events: CalendarEvent[] = [];
-    for (const c of await courseDetails()) {
-      for (const l of c.lessons) {
-        if (!l.class_date) continue;
-        const start = new Date(`${l.class_date}T00:00:00`); // 그날 0시 (로컬)
-        if (start.getTime() < fromT || start.getTime() >= toT) continue;
-        events.push({
-          id: `lesson-${l.id}`,
-          title: `${l.session_no}회차 ${l.title}`,
-          start: start.toISOString(),
-          allDay: true,
-          source: 'lesson',
-          category: '수업',
-          lessonId: String(l.id),
-          lessonStatus: STATUS[l.status],
-          courseName: c.name,
-        });
-      }
-    }
-    events.sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
-    return { superschoolLinked: false, events };
+  // 슈퍼스쿨 연동: 백엔드가 슈퍼스쿨(목 모드는 프론트 /auth/superschool/mock)로 redirect 해 줌
+  superschoolAuthorizeUrl(mode: 'login' | 'link', role?: Role): string {
+    const q = new URLSearchParams({ mode, redirect_uri: superschoolRedirectUri(), ...(role ? { role } : {}) });
+    return `${config.apiBaseUrl}/auth/superschool/start?${q}`;
   },
-  explainTerm: notSupported('낱말 뜻 만들기') as (lessonId: string, pageIndex: number, word: string) => Promise<{ meaning: string }>,
+  async superschoolLogin(code: string): Promise<AuthResponse> {
+    const body: S['SuperschoolCodeRequest'] = { code, redirect_uri: superschoolRedirectUri() };
+    const res = await http<S['LoginResponse']>('/auth/superschool/callback', post(body));
+    return { token: res.access_token, user: toUser(res.user) };
+  },
+  async linkSuperschool(code: string): Promise<User> {
+    const body: S['SuperschoolCodeRequest'] = { code, redirect_uri: superschoolRedirectUri() };
+    return toUser(await http<S['UserOut']>('/auth/superschool/link', post(body)));
+  },
+  unlinkSuperschool: async (): Promise<User> => toUser(await http<S['UserOut']>('/auth/superschool/link', { method: 'DELETE' })),
+
+  // 프로필 (이메일은 백엔드에 없어서 보내지 않음. 사진은 uploadAvatar가 이미 저장하므로 null(삭제)만 보냄)
+  async updateMe(input: ProfileInput): Promise<User> {
+    const body: S['ProfileUpdate'] = {};
+    if (input.name !== undefined) body.name = input.name;
+    if (input.avatarUrl === null) body.avatar_url = null;
+    if (Object.keys(body).length === 0) return realApi.me();
+    return toUser(await http<S['UserOut']>('/auth/me', { method: 'PATCH', body: JSON.stringify(body) }));
+  },
+  async uploadAvatar(file: Blob): Promise<{ avatarUrl: string }> {
+    const form = new FormData();
+    form.append('file', file, 'avatar.jpg');
+    const res = await http<S['AvatarOut']>('/auth/me/avatar', { method: 'POST', body: form });
+    return { avatarUrl: fileUrl(res.avatar_url) ?? res.avatar_url };
+  },
+  async changePassword(current: string, next: string): Promise<void> {
+    await http<void>('/auth/me/password', post({ current, next } satisfies S['PasswordChange']));
+  },
+
+  /** 캘린더: 수업 회차(class_date) + 슈퍼스쿨 학사 일정. from~to는 [from, to) */
+  async getCalendar(from: string, to: string): Promise<CalendarResponse> {
+    const q = new URLSearchParams({ from: localDate(from), to: localDate(to) });
+    const res = await http<S['CalendarOut']>(`/calendar?${q}`);
+    const events: CalendarEvent[] = res.events
+      .map((e) => ({
+        id: e.id,
+        title: e.title,
+        start: toLocalIso(e.start),
+        end: e.end ? toLocalIso(e.end) : undefined,
+        allDay: e.all_day,
+        source: e.source,
+        category: e.source === 'lesson' ? '수업' : e.category ?? undefined,
+        lessonId: e.lesson_id != null ? String(e.lesson_id) : undefined,
+        lessonStatus: e.lesson_status ? STATUS[e.lesson_status] : undefined,
+        courseName: e.course_name ?? undefined,
+      }))
+      .filter((e) => (e.end ?? e.start) >= from && e.start < to)
+      .sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+    return { superschoolLinked: res.superschool_linked, events };
+  },
+  async explainTerm(lessonId: string, pageIndex: number, word: string): Promise<{ meaning: string }> {
+    const res = await http<S['TermExplainOut']>(
+      `/lessons/${lessonId}/pages/${pageIndex}/terms/explain`, post({ word } satisfies S['TermExplainRequest']));
+    return { meaning: res.meaning };
+  },
 
   // 과목
   listCourses: async (): Promise<Course[]> => (await http<S['CourseOut'][]>('/courses')).map((c) => toCourse(c)),

@@ -16,7 +16,6 @@ const ALL_TABS = [
   { value: 'links', label: '계정 연동', icon: Link2 },
 ] as const;
 type Tab = (typeof ALL_TABS)[number]['value'];
-// 계정 연동(슈퍼스쿨)은 백엔드에 아직 없어서 목 모드에서만
 const TABS = ALL_TABS.filter((t) => t.value !== 'links' || features.superschool);
 
 export function Settings() {

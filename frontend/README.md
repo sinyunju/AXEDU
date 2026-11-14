@@ -1,7 +1,7 @@
 # 토끼와 거북이 — 프론트엔드
 
-React 19 + Vite + TypeScript + React Router. 기능 정의는 상위 폴더의 `최종_기능_정리.md`,
-백엔드 연동은 백엔드 저장소(sinyunju/AXEDU)의 README와 `/docs`를 따릅니다.
+React 19 + Vite + TypeScript + React Router.
+백엔드 연동은 [docs/BACKEND.md](../docs/BACKEND.md)와 백엔드 실행 후 `/docs`를 따릅니다.
 
 ## 실행
 
@@ -54,7 +54,7 @@ npm run dev                  # http://localhost:5173 (같은 Wi-Fi 기기는 htt
 
 ### 연결 방법
 
-1. 백엔드 실행 (백엔드 README "로컬 실행" — seed 포함)
+1. 백엔드 실행 ([docs/BACKEND.md](../docs/BACKEND.md) "로컬 실행" — seed 포함)
 2. `.env.local`에서 `VITE_USE_MOCK=false`
 3. 백엔드 주소는 `VITE_API_BASE_URL=auto`, `VITE_WS_BASE_URL=auto`(기본값)로 두면 **접속한 주소의 8000번 포트**를 씁니다.
    - PC에서 `http://localhost:5173` → `http://localhost:8000`, 아이패드에서 `http://PC의IP:5173` → `http://PC의IP:8000`
@@ -108,19 +108,13 @@ src/api/
 - 자막 종류: `content` 말풍선 / `flow` 구분선·작은 글씨 / `notice` 강조 상자 + "과제" 배지 (자막 시각은 표시 안 함)
 - 4401/4403/4404로 닫히면 재연결하지 않고 안내 (4401은 로그아웃 후 로그인 화면으로). 그 밖의 끊김은 1.5초 뒤 재연결
 
-### 실서버 모드에서 숨기는 기능 (`src/config.ts`의 `features`)
+### 목 모드와 실서버의 차이 (`src/config.ts`의 `features`)
 
-백엔드에 API가 없어서 목 모드에서만 보입니다. API가 생기면 값을 바꾸고 `real.ts`에 연결하세요.
-
-| 기능 | 키 |
-|---|---|
-| 슈퍼스쿨 로그인·계정 연동, 캘린더의 학사 일정(시험·행사·휴업일) | `superschool` |
-| 이름·이메일 수정, 프로필 사진, 비밀번호 변경 | `profileEdit` |
-| 단어를 넣으면 AI가 뜻 채우기 | `explainTerm` |
-
-**메인 화면 캘린더**(`calendar`)는 실서버에서도 보입니다. 일정 API가 아직 없어서, `real.ts`의 `getCalendar`가
-`GET /courses` + 과목별 `GET /courses/{id}`의 회차 `class_date`로 "내 수업 일정"만 만듭니다 (수업 날짜가 없는 회차는 안 나옴).
-백엔드에 `GET /calendar`가 생기면 그걸 부르도록 바꾸면 됩니다.
+- **이메일**(`profileEmail`): 백엔드에 저장하지 않아서 실서버에서는 내 정보 화면에 이메일 칸을 숨깁니다.
+- **슈퍼스쿨**(`superschool`): 실서버에서는 `GET /auth/superschool/start`로 이동합니다. 백엔드가 `SUPERSCHOOL_MOCK=true`(기본)면
+  프론트의 개발용 화면(`/auth/superschool/mock`)으로, `false`면 실제 슈퍼스쿨 화면으로 보냅니다. 백엔드 `FRONTEND_ORIGINS`에 지금 연 프론트 주소가 있어야 합니다.
+- **캘린더**: `GET /calendar` (수업 날짜 + 슈퍼스쿨을 연결했으면 학사 일정).
+- 프로필(`PATCH /auth/me`, `POST /auth/me/avatar`, `POST /auth/me/password`), 낱말 뜻 채우기(`POST /lessons/{id}/pages/{n}/terms/explain`)는 목 모드와 똑같이 동작합니다.
 
 ## 배포 (Vercel)
 

@@ -118,7 +118,7 @@ export function LessonReview() {
     setLesson({ ...lesson!, pages: lesson!.pages.map((p) => (p.index === page.index ? { ...p, ...patch } : p)) });
   }
 
-  /** 단어를 입력하면 AI가 쉬운 뜻을 채움 (목 모드 전용). 응답이 오는 사이 단어가 바뀌었으면 버림 */
+  /** 단어를 입력하면 AI가 쉬운 뜻을 채움. 응답이 오는 사이 단어가 바뀌었으면 버림 */
   async function explain(i: number, word: string) {
     const w = word.trim();
     if (!w || !features.explainTerm) return;

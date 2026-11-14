@@ -134,10 +134,12 @@ function ProfileEditor() {
             <span>이름</span>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
           </label>
-          <label className="field">
-            <span>이메일 (선택)</span>
-            <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="알림을 받을 이메일" />
-          </label>
+          {features.profileEmail && (
+            <label className="field">
+              <span>이메일 (선택)</span>
+              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="알림을 받을 이메일" />
+            </label>
+          )}
           <label className="field">
             <span>아이디</span>
             <input className="input" value={user.username} disabled />

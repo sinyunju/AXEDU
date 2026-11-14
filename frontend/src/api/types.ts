@@ -10,8 +10,8 @@ export interface User {
   username: string; // 로그인 아이디 (백엔드 login_id)
   name: string;
   email?: string;
-  avatarUrl?: string; // 프로필 사진 (목 모드 전용)
-  school?: string; // 슈퍼스쿨 연동 시 채워짐 (목 모드 전용)
+  avatarUrl?: string; // 프로필 사진
+  school?: string; // 슈퍼스쿨 연동 시 채워짐
   superschoolLinked: boolean;
 }
 
@@ -33,7 +33,7 @@ export interface ProfileInput {
   avatarUrl?: string | null; // null이면 사진 삭제
 }
 
-/** 메인 화면 캘린더 일정 (목 모드 전용) */
+/** 메인 화면 캘린더 일정 */
 export interface CalendarEvent {
   id: string;
   title: string;
