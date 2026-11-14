@@ -1,9 +1,24 @@
 const useMock = (import.meta.env.VITE_USE_MOCK ?? 'true') === 'true';
 
+/**
+ * 백엔드 주소. 값이 없거나 'auto'면 "지금 이 페이지를 연 주소의 8000번 포트"를 씀.
+ * - PC에서 http://localhost:5173 → http://localhost:8000
+ * - 아이패드에서 http://192.168.0.10:5173 → http://192.168.0.10:8000
+ *   (와이파이가 바뀌어 PC의 IP가 달라져도 .env.local을 고칠 필요가 없음)
+ * 배포(Vercel)할 때는 VITE_API_BASE_URL / VITE_WS_BASE_URL에 실제 백엔드 주소를 적어야 함.
+ */
+function backendUrl(value: string | undefined, kind: 'http' | 'ws') {
+  if (value && value !== 'auto') return value.replace(/\/$/, '');
+  const { protocol, hostname } = window.location;
+  const secure = protocol === 'https:';
+  const scheme = kind === 'http' ? (secure ? 'https' : 'http') : secure ? 'wss' : 'ws';
+  return `${scheme}://${hostname}:8000`;
+}
+
 export const config = {
   useMock,
-  apiBaseUrl: (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, ''),
-  wsBaseUrl: (import.meta.env.VITE_WS_BASE_URL ?? 'ws://localhost:8000').replace(/\/$/, ''),
+  apiBaseUrl: backendUrl(import.meta.env.VITE_API_BASE_URL, 'http'),
+  wsBaseUrl: backendUrl(import.meta.env.VITE_WS_BASE_URL, 'ws'),
 };
 
 /**
