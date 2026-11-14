@@ -913,3 +913,29 @@ input.input::-webkit-datetime-edit { padding: 0; line-height: 1.2; }
 .class-main > .slide-board.fill { flex: 1; height: auto; }
 .present:fullscreen > .class-main, .present.pseudo-fullscreen > .class-main { flex: 1; height: auto; min-height: 0; }
 .present:-webkit-full-screen > .class-main { flex: 1; height: auto; min-height: 0; }
+
+/* 학생 오른쪽 패널: 쉬운 설명·선생님 설명 칸 크기를 정하고 칸 안에서 스크롤 */
+.side-card { display: flex; flex-direction: column; min-height: 0; position: relative; }
+.side-card .card-title { flex: none; }
+.panel-scroll { overflow-y: auto; min-height: 0; overscroll-behavior: contain; padding-right: 4px; scrollbar-gutter: stable; }
+.panel-scroll:focus-visible { outline: 3px solid var(--primary-200); outline-offset: 2px; border-radius: var(--r-sm); }
+.side-image { flex: none; }
+.side-image img { max-height: 22vh; width: auto; margin: 0 auto; object-fit: contain; }
+.new-below {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); border: none; cursor: pointer;
+  height: 34px; padding: 0 14px; border-radius: 999px; background: var(--navy); color: var(--bg);
+  font: inherit; font-size: 0.85rem; font-weight: 620; box-shadow: var(--shadow-md);
+}
+@media (min-width: 861px) {
+  /* 패널 전체 높이를 화면에 맞추고, 쉬운 설명은 최대 40%, 남는 공간은 선생님 설명 */
+  .class-split .class-side { display: flex; flex-direction: column; height: calc(100vh - 100px); max-height: none; overflow: hidden; } /* 실제 높이는 useFitToViewport가 맞춤 */
+  .side-easy { flex: 0 1 auto; max-height: 40%; }
+  .side-easy .panel-scroll { flex: 1 1 auto; }
+  .side-captions { flex: 1 1 0; min-height: 220px; }
+  .side-captions .panel-scroll { flex: 1 1 0; }
+  .present:fullscreen .class-split .class-side, .present.pseudo-fullscreen .class-split .class-side { height: 100%; }
+}
+@media (max-width: 860px) {
+  .side-easy .panel-scroll { max-height: 38vh; }
+  .side-captions .panel-scroll { max-height: 50vh; }
+}

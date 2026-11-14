@@ -26,6 +26,8 @@ import { BackLink, Empty, ErrorView, Loading } from '../../components/ui';
 import { useAnnotations } from '../../hooks/useAnnotations';
 import { useAsync } from '../../hooks/useAsync';
 import { useFullscreen } from '../../hooks/useFullscreen';
+import { useFitToViewport } from '../../hooks/useFitToViewport';
+import { useFollowBottom } from '../../hooks/useFollowBottom';
 import { useLiveLesson } from '../../hooks/useLiveLesson';
 import { usePageKeys } from '../../hooks/usePageKeys';
 
@@ -54,6 +56,9 @@ export function StudentClass() {
   const fs = useFullscreen(presentRef);
   const { loadPage } = live;
   const total = lesson?.pages.length ?? 0;
+  const captionScroll = useFollowBottom(pageNo, live.countOf(pageNo));
+  const sideRef = useRef<HTMLDivElement>(null);
+  useFitToViewport(sideRef, Boolean(lesson) && !fs.on);
 
   useEffect(() => {
     if (lesson) loadPage(pageNo);
@@ -197,19 +202,21 @@ export function StudentClass() {
             <GripVertical size={16} />
           </div>
 
-          <div className="stack class-side">
+          <div className="stack class-side" ref={sideRef}>
             {page.easyText.trim() && (
-              <section className="card">
+              <section className="card side-card side-easy">
                 <div className="card-title">
                   <BookOpenText size={20} />
                   <h3>쉬운 설명</h3>
                 </div>
-                <EasyText text={page.easyText} terms={page.terms} />
+                <div className="panel-scroll" tabIndex={0} aria-label="쉬운 설명 (스크롤해서 읽기)">
+                  <EasyText text={page.easyText} terms={page.terms} />
+                </div>
               </section>
             )}
 
             {page.image?.approved && page.image.url && (
-              <section className="card card-tight">
+              <section className="card card-tight side-image">
                 <div className="card-title" style={{ marginBottom: 10 }}>
                   <ImageIcon size={20} />
                   <h3>그림으로 보기</h3>
@@ -218,18 +225,32 @@ export function StudentClass() {
               </section>
             )}
 
-            <section className="card">
+            <section className="card side-card side-captions">
               <div className="card-title">
                 <MessagesSquare size={20} />
                 <h3>선생님 설명</h3>
                 <span className="chip chip-blue count">{pageCaptions.items.length}개</span>
               </div>
-              {pageCaptions.items.length === 0 ? (
-                <Empty icon={<Presentation size={24} />}>
-                  <span className="small">아직 이 페이지 설명이 없어요.</span>
-                </Empty>
-              ) : (
-                <CaptionList items={pageCaptions.items} hardWords={[...page.terms, ...pageCaptions.hardWords]} />
+              <div
+                className="panel-scroll"
+                ref={captionScroll.ref}
+                onScroll={captionScroll.onScroll}
+                tabIndex={0}
+                aria-label="선생님 설명 (스크롤해서 읽기)"
+                aria-live="polite"
+              >
+                {pageCaptions.items.length === 0 ? (
+                  <Empty icon={<Presentation size={24} />}>
+                    <span className="small">아직 이 페이지 설명이 없어요.</span>
+                  </Empty>
+                ) : (
+                  <CaptionList items={pageCaptions.items} hardWords={[...page.terms, ...pageCaptions.hardWords]} />
+                )}
+              </div>
+              {captionScroll.hasNewBelow && (
+                <button className="new-below" onClick={captionScroll.toBottom}>
+                  새 설명 보기 ↓
+                </button>
               )}
             </section>
           </div>

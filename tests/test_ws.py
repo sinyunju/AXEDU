@@ -15,10 +15,12 @@ PDF = make_pdf(["광합성이란? 식물이 빛으로 양분을 만드는 과정
 class CountingProvider(MockProvider):
     def __init__(self):
         self.calls: list[tuple[str, list[str]]] = []
+        self.contexts: list[str] = []
 
-    async def live_caption(self, source_text, transcript, previous_easy):
+    async def live_caption(self, source_text, transcript, previous_easy, context=""):
         self.calls.append((transcript, list(previous_easy)))
-        out = await super().live_caption(source_text, transcript, previous_easy)
+        self.contexts.append(context)
+        out = await super().live_caption(source_text, transcript, previous_easy, context)
         return {**out, "hard_words": [{"word": f"낱말{len(self.calls)}", "meaning": "뜻"}]}
 
 
@@ -124,8 +126,11 @@ def test_transcript_page_change_flow(client, session, ctx):
         wait_idle(client)
         assert len(provider.calls) == 2
         transcript, previous = provider.calls[1]
-        assert transcript == "오늘은 광합성을 배워요 식물은 햇빛이 필요해요"  # 누적 발화 전체
-        assert previous == first["easy_transcript"]  # 직전 자막을 LLM에 함께 넘김
+        assert transcript == "식물은 햇빛이 필요해요"  # 아직 자막으로 만들지 않은 새 발화만
+        assert provider.contexts[1] == "오늘은 광합성을 배워요"  # 이미 처리한 발화는 문맥으로만
+        assert previous == first["easy_transcript"]  # 이미 나간 자막을 LLM에 함께 넘김
+        assert update["easy_transcript"][:len(previous)] == previous  # 이전 자막 뒤에 새 자막이 붙음
+        assert len(update["easy_transcript"]) == len(previous) + 1
 
     assert session.exec(select(Lesson)).one().current_page == 2
     assert len(session.exec(select(Transcript)).all()) == 2
@@ -268,7 +273,7 @@ def test_interval_and_ticker(session, lesson_with_page):
         clock.now += 5  # 마지막 호출 후 15초
         cap.tick()
         await cap.wait_idle()
-        assert len(provider.calls) == 2 and provider.calls[1][0] == "하나 둘"
+        assert len(provider.calls) == 2 and provider.calls[1][0] == "둘"  # 새 발화만
 
         clock.now += 100
         cap.tick()  # 새 텍스트가 없으면 호출 안 함
@@ -308,7 +313,7 @@ def test_page_lock_prevents_overlap(session, lesson_with_page):
     asyncio.run(scenario())
     assert max_running == 1  # 같은 페이지 호출은 겹치지 않음
     assert len(provider.calls) == 2  # 진행 중에 들어온 발화는 한 번 더 처리 (중복 호출 없이)
-    assert provider.calls[1][0] == "하나 둘"
+    assert provider.calls[1][0] == "둘"  # 진행 중에 들어온 새 발화만
 
 
 def test_failure_is_retried_later(session, lesson_with_page):
@@ -367,7 +372,7 @@ def test_unchanged_caption_is_not_broadcast(session, lesson_with_page):
     manager = FakeManager()
 
     class Chatter(MockProvider):  # 수업 내용이 없는 발화 → 이전 자막 그대로
-        async def live_caption(self, source_text, transcript, previous_easy):
+        async def live_caption(self, source_text, transcript, previous_easy, context=""):
             return {"easy_transcript": list(previous_easy), "hard_words": []}
 
     cap = LiveCaptioner(manager, interval=0, provider_getter=lambda: Chatter(), clock=FakeClock())
@@ -379,7 +384,8 @@ def test_unchanged_caption_is_not_broadcast(session, lesson_with_page):
 
     asyncio.run(scenario())
     assert manager.sent == []
-    assert session.get(PageLive, (lid, 1)) is None
+    live = session.get(PageLive, (lid, 1))
+    assert live.easy_transcript == [] and live.captioned_upto > 0  # 처리한 것으로만 기록 (다시 보내지 않음)
 
 
 def test_normalize_captions():
@@ -407,7 +413,7 @@ def test_caption_types_are_saved_and_broadcast(session, lesson_with_page):
     manager = FakeManager()
 
     class Typed(MockProvider):
-        async def live_caption(self, source_text, transcript, previous_easy):
+        async def live_caption(self, source_text, transcript, previous_easy, context=""):
             return {"easy_transcript": [{"text": "지금부터 정리해요.", "type": "flow"},
                                         {"text": "식물은 빛으로 양분을 만들어요.", "type": "content"},
                                         {"text": "다음 시간까지 잎을 가져와요.", "type": "notice"}],
@@ -425,3 +431,58 @@ def test_caption_types_are_saved_and_broadcast(session, lesson_with_page):
     assert types == ["flow", "content", "notice"]
     session.expire_all()
     assert [i["type"] for i in session.get(PageLive, (lid, 1)).easy_transcript] == types
+
+
+def test_repeated_and_duplicate_captions_are_dropped(session, lesson_with_page):
+    """LLM이 이미 나간 자막을 다시 돌려줘도 같은 문장은 한 번만 나간다."""
+    lid = lesson_with_page
+    manager = FakeManager()
+
+    class Repeating(MockProvider):
+        async def live_caption(self, source_text, transcript, previous_easy, context=""):
+            return {"easy_transcript": [{"text": "지금부터 NLP 강의를 시작해요.", "type": "flow"},
+                                        {"text": "지금부터 NLP 강의를 시작해요", "type": "flow"},  # 문장부호만 다름
+                                        {"text": f"{transcript}을 배워요.", "type": "content"}],
+                    "hard_words": []}
+
+    cap = LiveCaptioner(manager, interval=0, provider_getter=lambda: Repeating(), clock=FakeClock())
+
+    async def scenario():
+        add_transcript(session, lid, "토큰화")
+        cap.on_transcript(lid, 1)
+        await cap.wait_idle()
+        add_transcript(session, lid, "어텐션")
+        cap.on_transcript(lid, 1)
+        await cap.wait_idle()
+
+    asyncio.run(scenario())
+    texts = [c["text"] for c in manager.sent[-1]["easy_transcript"]]
+    assert texts == ["지금부터 NLP 강의를 시작해요.", "토큰화을 배워요.", "어텐션을 배워요."]
+
+
+def test_failed_call_retries_same_utterances(session, lesson_with_page):
+    """LLM 호출이 실패하면 처리 위치를 옮기지 않아 다음 호출에 같은 발화가 다시 간다."""
+    lid = lesson_with_page
+    seen = []
+
+    class Flaky(MockProvider):
+        async def live_caption(self, source_text, transcript, previous_easy, context=""):
+            seen.append(transcript)
+            if len(seen) == 1:
+                raise RuntimeError("일시 오류")
+            return await super().live_caption(source_text, transcript, previous_easy, context)
+
+    clock = FakeClock()
+    cap = LiveCaptioner(FakeManager(), interval=15, provider_getter=lambda: Flaky(), clock=clock)
+
+    async def scenario():
+        add_transcript(session, lid, "하나")
+        cap.on_transcript(lid, 1)
+        await cap.wait_idle()
+        add_transcript(session, lid, "둘")
+        clock.now += 15
+        cap.tick()
+        await cap.wait_idle()
+
+    asyncio.run(scenario())
+    assert seen == ["하나", "하나 둘"]

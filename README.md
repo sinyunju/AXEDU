@@ -42,7 +42,8 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | `MOCK_IMAGE` | `true` | `true`면 이미지 생성을 호출하지 않고 자리표시 이미지 (실제 호출은 1장 약 37크레딧) |
 | `AI_BASE_URL` | `https://api.baze.co/v1/gateway` | Gateway 주소 |
 | `AI_API_KEY` | — | Gateway 키. `.env`에만 두고 커밋·프론트 노출 금지 |
-| `MODEL_FAST` / `MODEL_MAIN` / `MODEL_IMAGE` | `gemini-3.5-flash-lite` / `gemini-3.8-flash` / `gemini-nano-banana-2.1` | 실시간 자막 / 재구성·퀴즈·챗봇 / 이미지 |
+| `MODEL_MAIN` / `MODEL_IMAGE` | `gemini-3.8-flash` / `gemini-nano-banana-2.1` | 재구성·퀴즈·챗봇 / 이미지 |
+| `MODEL_LIVE` | (비움 → `MODEL_MAIN`) | 실시간 자막. 자막이 나오기까지 보통 3~9초. `gemini-3.5-flash-lite`로 바꾸면 1~2초지만 용어 교정·설명 누락이 많아짐. (`MODEL_FAST`는 예전 설정이라 지금은 쓰지 않음) |
 | `IMAGE_SIZE`, `IMAGE_ASPECT_RATIO` | `1K`, `1:1` | 이미지 크기·비율 |
 | `AI_TIMEOUT_SECONDS` | `90` | AI 호출 타임아웃 |
 | `GENERATE_CONCURRENCY` | `3` | 페이지 재구성 동시 호출 수 |

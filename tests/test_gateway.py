@@ -28,7 +28,7 @@ def completion(content: str) -> dict:
 
 def text_provider(handler) -> GatewayTextProvider:
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    return GatewayTextProvider(base_url=BASE, api_key="k", model_fast="fast", model_main="main", http_client=client)
+    return GatewayTextProvider(base_url=BASE, api_key="k", model_live="fast", model_main="main", http_client=client)
 
 
 @pytest.mark.parametrize("raw", [
@@ -179,7 +179,7 @@ def test_live_caption_uses_fast_model_and_previous():
     result = asyncio.run(text_provider(handler).live_caption("페이지 글", "선생님 발화", prev))
     assert result == out
     body = bodies[0]
-    assert body["model"] == "fast"  # 실시간은 MODEL_FAST
+    assert body["model"] == "fast"  # 실시간은 MODEL_LIVE
     assert body["response_format"]["json_schema"]["name"] == "live_caption"
     prompt = body["messages"][-1]["content"]
     assert '{"text": "이전 자막이에요.", "type": "content"}' in prompt

@@ -50,13 +50,13 @@ def parse_json_object(text: str | None) -> dict[str, Any]:
 class GatewayTextProvider(AIProvider):
     name = "gateway"
 
-    def __init__(self, *, base_url: str, api_key: str, model_fast: str, model_main: str,
+    def __init__(self, *, base_url: str, api_key: str, model_live: str, model_main: str,
                  timeout: float = 90, http_client: httpx.AsyncClient | None = None):
         self.client = AsyncOpenAI(
             base_url=base_url, api_key=api_key, timeout=timeout, max_retries=2,
             default_headers={"User-Agent": USER_AGENT}, http_client=http_client,
         )
-        self.model_fast = model_fast
+        self.model_live = model_live
         self.model_main = model_main
         # json_schema response_format을 모델이 거부하면(400) 이후로는 프롬프트만으로 JSON을 요구
         self._schema_supported: dict[str, bool] = {}
@@ -95,9 +95,10 @@ class GatewayTextProvider(AIProvider):
     async def restructure_page(self, source_text: str) -> dict[str, Any]:
         return await self._json_call(self.model_main, restructure_messages(source_text), RESTRUCTURE_SCHEMA, RestructureOut)
 
-    async def live_caption(self, source_text: str, transcript: str, previous_easy: list[dict[str, str]]) -> dict[str, Any]:
-        # 실시간이라 빠른 모델 사용
-        return await self._json_call(self.model_fast, live_caption_messages(source_text, transcript, previous_easy),
+    async def live_caption(self, source_text: str, transcript: str, previous_easy: list[dict[str, str]],
+                           context: str = "") -> dict[str, Any]:
+        return await self._json_call(self.model_live,
+                                     live_caption_messages(source_text, transcript, previous_easy, context),
                                      LIVE_CAPTION_SCHEMA, LiveCaptionOut)
 
     async def generate_quiz(self, pages, transcripts) -> dict[str, Any]:

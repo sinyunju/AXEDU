@@ -26,7 +26,7 @@ async def main(with_image: bool) -> None:
     if not s.ai_api_key:
         raise SystemExit("AI_API_KEY가 비어 있습니다. .env에 키를 넣어 주세요.")
 
-    text = GatewayTextProvider(base_url=s.ai_base_url, api_key=s.ai_api_key, model_fast=s.model_fast,
+    text = GatewayTextProvider(base_url=s.ai_base_url, api_key=s.ai_api_key, model_live=s.model_live or s.model_main,
                                model_main=s.model_main, timeout=s.ai_timeout_seconds)
     print(f"[텍스트] model={s.model_main} 호출 중...")
     t0 = time.perf_counter()

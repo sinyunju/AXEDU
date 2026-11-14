@@ -35,10 +35,12 @@ class MockProvider(AIProvider):
             ),
         }
 
-    async def live_caption(self, source_text: str, transcript: str, previous_easy: list[dict[str, str]]) -> dict[str, Any]:
+    async def live_caption(self, source_text: str, transcript: str, previous_easy: list[dict[str, str]],
+                           context: str = "") -> dict[str, Any]:
+        # 새 발화만 받아 새 자막만 돌려준다 (서버가 이전 자막 뒤에 붙임)
         snippet = transcript.strip()[-25:] if transcript.strip() else ""
-        new = [{"text": f"선생님 말씀: {snippet}", "type": "content"}] if snippet else []
-        return {"easy_transcript": [*previous_easy, *new], "hard_words": []}
+        return {"easy_transcript": [{"text": f"선생님 말씀: {snippet}", "type": "content"}] if snippet else [],
+                "hard_words": []}
 
     async def generate_quiz(self, pages: list[dict[str, Any]], transcripts: list[dict[str, Any]]) -> dict[str, Any]:
         page_nos = [p["page_no"] for p in pages] or [1]

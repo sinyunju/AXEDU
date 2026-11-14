@@ -21,7 +21,7 @@ def get_ai_provider() -> AIProvider:
         return MockProvider()
     from app.ai.gateway import GatewayTextProvider
 
-    return GatewayTextProvider(base_url=s.ai_base_url, api_key=_require_key(), model_fast=s.model_fast,
+    return GatewayTextProvider(base_url=s.ai_base_url, api_key=_require_key(), model_live=s.model_live or s.model_main,
                                model_main=s.model_main, timeout=s.ai_timeout_seconds)
 
 

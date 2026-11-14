@@ -25,8 +25,10 @@ class Settings(BaseSettings):
     mock_image: bool = True  # 이미지 생성 mock (실제 호출은 1장에 크레딧 소모가 커서 따로 제어)
     ai_base_url: str = "https://api.baze.co/v1/gateway"
     ai_api_key: str = ""
-    model_fast: str = "gemini-3.5-flash-lite"
-    model_main: str = "gemini-3.8-flash"
+    model_main: str = "gemini-3.8-flash"  # 재구성·퀴즈·챗봇
+    # 실시간 자막. 비우면 model_main (빠른 모델은 용어 교정·설명 누락이 많아 기본은 상위 모델)
+    model_live: str = ""
+    model_fast: str = "gemini-3.5-flash-lite"  # 예전 설정 (지금은 쓰지 않음. 빠른 모델을 쓰려면 MODEL_LIVE에 적기)
     model_image: str = "gemini-nano-banana-2.1"
     image_size: str = "1K"  # Nano Banana: 1K | 2K | 4K
     image_aspect_ratio: str = "1:1"

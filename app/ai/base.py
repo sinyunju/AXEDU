@@ -31,9 +31,12 @@ class AIProvider(ABC):
 
     @abstractmethod
     async def live_caption(
-        self, source_text: str, transcript: str, previous_easy: list[dict[str, str]]
+        self, source_text: str, transcript: str, previous_easy: list[dict[str, str]], context: str = ""
     ) -> dict[str, Any]:
-        """→ {easy_transcript: [{text, type: content|flow|notice}], hard_words: [{word, meaning}]}"""
+        """transcript = 아직 자막으로 만들지 않은 새 발화, context = 직전 발화(문맥용), previous_easy = 이미 나간 자막.
+
+        → {easy_transcript: [새로 덧붙일 {text, type: content|flow|notice}], hard_words: [{word, meaning}]}
+        """
 
     @abstractmethod
     async def generate_quiz(self, pages: list[dict[str, Any]], transcripts: list[dict[str, Any]]) -> dict[str, Any]:

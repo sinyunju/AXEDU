@@ -101,6 +101,8 @@ class PageLive(SQLModel, table=True):
     easy_transcript: list[Any] = Field(default_factory=list, sa_column=Column(JSON))
     # 명세 v2에 추가: 실시간 자막에서 나온 어려운 낱말 (재접속 시 복원용)
     hard_words: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    # 여기까지(Transcript.id) 자막으로 만들었음. 다음 호출은 이보다 뒤의 발화만 LLM에 넘긴다
+    captioned_upto: int = 0
     updated_at: datetime = Field(default_factory=utcnow)
 
 

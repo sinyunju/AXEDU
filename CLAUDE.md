@@ -43,7 +43,7 @@
   image_suggestion(JSON: {needed: bool, reason, prompt} | null),
   generated_image_path(nullable), approved(bool)
 - **Transcript**: id, lesson_id, page_no, text, created_at  (페이지별 교사 발화 조각)
-- **PageLive**: lesson_id, page_no, easy_transcript(JSON: [{text, type}]), hard_words(JSON: [{word, meaning}]), updated_at  (실시간 쉬운 자막 결과. type은 `content | flow | notice`, 6절 참고. hard_words는 재접속 시 복원용)
+- **PageLive**: lesson_id, page_no, easy_transcript(JSON: [{text, type}]), hard_words(JSON: [{word, meaning}]), captioned_upto(자막으로 만든 마지막 Transcript.id), updated_at  (실시간 쉬운 자막 결과. type은 `content | flow | notice`, 6절 참고. hard_words는 재접속 시 복원용)
 - **Quiz**: id, lesson_id, questions(JSON)  (회차당 1개)
 - **QuizAttempt**: id, quiz_id, student_id, answers(JSON), score, submitted_at  (학생별 기록)
 - **ChatMessage**: id, lesson_id, student_id, role(`user | assistant`), content, related_page(nullable), created_at  (학생별·회차별 대화 기록)
@@ -134,8 +134,12 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 - transcript 수신 → Transcript 저장 → 해당 페이지 버퍼에 누적
 - 다음 중 하나가 충족되면 LLM 호출: (a) 마지막 호출 후 15초 경과 + 새 텍스트 있음, (b) page_change 발생(이전 페이지 확정)
 - 같은 페이지에 대해 LLM 호출이 동시에 겹치지 않도록 페이지별 lock
-- LLM 입력: 페이지 source_text + 해당 페이지의 누적 발화 전체 + 직전 easy_transcript
-- LLM 출력(JSON): `{"easy_transcript": [{"text":"...","type":"content"}], "hard_words": [{"word":"","meaning":""}]}`
+- LLM 입력: 페이지 source_text + **아직 자막으로 만들지 않은 새 발화** + 직전 발화 일부(문맥용, 이미 처리한 부분) + 이미 나간 easy_transcript
+- LLM 출력(JSON): `{"easy_transcript": [새로 덧붙일 {"text":"...","type":"content"}], "hard_words": [{"word":"","meaning":""}]}`
+- 서버가 새 자막을 이전 자막 뒤에 붙인다 (LLM에게 전체 목록을 다시 쓰게 하면 이전 자막을 되풀이하고 새 말을 빠뜨림).
+  PageLive.captioned_upto에 처리한 마지막 Transcript.id를 기록하고, 이미 나간 문장과 같은 문장(공백·문장부호 무시)은 버린다.
+  LLM 호출이 실패하면 처리 위치를 옮기지 않아 다음 호출에 같은 발화가 다시 간다
+- 실시간 자막 모델은 MODEL_LIVE (비우면 MODEL_MAIN)
 - 자막 항목 type
   - `content`: 수업 내용 설명
   - `flow`: 수업 흐름 안내 ("지금부터 정리해요", "첫 번째는…", "이제 ○○를 볼 거예요") — 남긴다

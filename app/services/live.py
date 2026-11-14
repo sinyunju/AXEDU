@@ -23,8 +23,10 @@ from app.models import Page, PageLive, Role, Transcript, utcnow
 
 logger = logging.getLogger(__name__)
 
-# LLM에 넘기는 누적 발화 최대 길이 (최근 것 우선)
+# LLM에 한 번에 넘기는 새 발화 최대 길이 (넘으면 나눠서 처리)
 MAX_TRANSCRIPT_CHARS = 4000
+# 문맥용으로 함께 넘기는 직전 발화(이미 자막으로 만든 부분) 길이
+CONTEXT_CHARS = 400
 
 CAPTION_TYPES = ("content", "flow", "notice")
 
@@ -171,36 +173,78 @@ class LiveCaptioner:
                 await self.manager.broadcast(lesson_id, {"type": "page_update", "page_no": page_no, **result})
 
     async def _caption(self, lesson_id: int, page_no: int) -> dict[str, Any] | None:
+        """아직 자막으로 만들지 않은 발화만 LLM에 넘기고, 돌아온 새 자막을 이전 자막 뒤에 붙인다.
+
+        LLM이 자막 전체를 다시 쓰게 하면 이전 자막을 되풀이하거나 새 말을 빠뜨리기 쉬워서
+        (빠른 모델에서 특히), 서버가 "어디까지 처리했는지"를 기억하고 이어 붙이는 방식으로 한다.
+        """
         with Session(get_engine()) as session:
             page = session.exec(select(Page).where(Page.lesson_id == lesson_id, Page.page_no == page_no)).first()
             if page is None:
                 return None
-            texts = session.exec(
-                select(Transcript.text).where(Transcript.lesson_id == lesson_id, Transcript.page_no == page_no)
+            live = session.get(PageLive, (lesson_id, page_no))
+            upto = live.captioned_upto if live else 0
+            rows = session.exec(
+                select(Transcript.id, Transcript.text)
+                .where(Transcript.lesson_id == lesson_id, Transcript.page_no == page_no)
                 .order_by(Transcript.id)
             ).all()
-            live = session.get(PageLive, (lesson_id, page_no))
             source_text = page.source_text
             previous = normalize_captions(live.easy_transcript) if live else []
             previous_words = list(live.hard_words) if live else []
 
-        transcript = " ".join(texts)[-MAX_TRANSCRIPT_CHARS:]
-        if not transcript.strip():
+        done = [text for tid, text in rows if tid <= upto]
+        new_rows: list[tuple[int, str]] = []
+        size = 0
+        for tid, text in rows:
+            if tid <= upto:
+                continue
+            if new_rows and size + len(text) > MAX_TRANSCRIPT_CHARS:
+                break  # 너무 많이 밀렸으면 나눠서 처리 (남은 것은 다음 주기에)
+            new_rows.append((tid, text))
+            size += len(text)
+        if not new_rows:
             return None
-        out = await self._provider_getter().live_caption(source_text, transcript, previous)
-        easy = normalize_captions(out.get("easy_transcript"))
+        if len(new_rows) < sum(1 for tid, _ in rows if tid > upto):
+            self._state(lesson_id, page_no).pending = True
+
+        transcript = " ".join(text for _, text in new_rows)
+        context = " ".join(done)[-CONTEXT_CHARS:]
+        out = await self._provider_getter().live_caption(source_text, transcript, previous, context)
+        added = _new_captions(previous, normalize_captions(out.get("easy_transcript")))
+        easy = previous + added
         words = _merge_hard_words(previous_words, out.get("hard_words", []))
-        if easy == previous and words == previous_words:
-            return None  # 잡담만 있었던 경우 등: 바뀐 게 없으면 저장·전송하지 않음
+        changed = bool(added) or words != previous_words
 
         with Session(get_engine()) as session:
             live = session.get(PageLive, (lesson_id, page_no)) or PageLive(lesson_id=lesson_id, page_no=page_no)
-            live.easy_transcript = easy
-            live.hard_words = words
-            live.updated_at = utcnow()
+            live.captioned_upto = new_rows[-1][0]  # 잡담뿐이었어도 처리한 것으로 기록 (다시 보내지 않음)
+            if changed:
+                live.easy_transcript = easy
+                live.hard_words = words
+                live.updated_at = utcnow()
             session.add(live)
             session.commit()
+        if not changed:
+            return None  # 잡담·반복만 있었던 경우: 전송하지 않음
         return {"easy_transcript": easy, "hard_words": words}
+
+
+def _norm(text: str) -> str:
+    """중복 비교용: 공백·문장부호를 빼고 비교."""
+    return "".join(ch for ch in text if ch.isalnum())
+
+
+def _new_captions(previous: list[dict[str, str]], new: list[dict[str, str]]) -> list[dict[str, str]]:
+    """이미 나간 자막과 같은 문장, 새 자막 안에서 되풀이된 문장을 뺀다 (LLM이 지시를 어겨도 중복이 안 나가게)."""
+    seen = {_norm(c["text"]) for c in previous}
+    out = []
+    for c in new:
+        key = _norm(c["text"])
+        if key and key not in seen:
+            seen.add(key)
+            out.append(c)
+    return out
 
 
 def _merge_hard_words(old: list[dict[str, Any]], new: list[dict[str, Any]]) -> list[dict[str, Any]]:

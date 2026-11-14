@@ -67,3 +67,29 @@ def test_mock_provider_shapes(tmp_env):
     from app.ai import get_image_provider
 
     assert asyncio.run(get_image_provider().generate_image("x")).startswith(b"\x89PNG")
+
+
+def test_captioned_upto_backfilled_on_old_db(tmp_path, monkeypatch):
+    """captioned_upto 컬럼이 없던 예전 DB: 추가하면서 기존 페이지는 지금까지의 발화를 처리한 것으로 채운다."""
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    con = sqlite3.connect(path)
+    con.executescript("""
+        CREATE TABLE transcript (id INTEGER PRIMARY KEY, lesson_id INTEGER, page_no INTEGER, text TEXT, created_at TEXT);
+        CREATE TABLE pagelive (lesson_id INTEGER, page_no INTEGER, easy_transcript JSON, hard_words JSON NOT NULL DEFAULT '[]',
+                               updated_at TEXT, PRIMARY KEY (lesson_id, page_no));
+        INSERT INTO transcript VALUES (1, 1, 1, 'a', ''), (2, 1, 1, 'b', ''), (3, 1, 2, 'c', '');
+        INSERT INTO pagelive VALUES (1, 1, '[]', '[]', ''), (1, 3, '[]', '[]', '');
+    """)
+    con.commit()
+    con.close()
+    from sqlalchemy import create_engine
+
+    from app.db import _add_missing_columns
+
+    engine = create_engine(f"sqlite:///{path}")
+    _add_missing_columns(engine)
+    engine.dispose()
+    rows = sqlite3.connect(path).execute("SELECT lesson_id, page_no, captioned_upto FROM pagelive ORDER BY page_no").fetchall()
+    assert rows == [(1, 1, 2), (1, 3, 0)]
