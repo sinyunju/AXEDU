@@ -143,6 +143,7 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | GET | `/lessons/{id}/quiz/attempts/me` | 학생 | 내 풀이 기록 (최신순) |
 | POST | `/lessons/{id}/chat` | 학생 | `{message}` → `{question, answer}` (`answer.related_page`) |
 | GET | `/lessons/{id}/chat` | 학생 | 내 대화 기록 |
+| GET | `/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD` | 둘 다 | 기간 안(양 끝 포함)에 수업 날짜가 있는 회차 → `{superschool_linked: false, events: [{id, title, start, end, all_day, source: "lesson", category, lesson_id, lesson_status, course_name}]}`. 학생은 승인된 회차만. 수업 날짜에 시각이 없어 `all_day: true`. 최대 400일, ISO 날짜시간도 받음 |
 | GET | `/lessons/{id}/annotations` | 둘 다 | 내 필기 전체 `{pages: [{page_no, strokes, updated_at}]}` (필기 있는 페이지만) |
 | PUT | `/lessons/{id}/annotations/{n}` | 둘 다 | `{strokes}` → 그 페이지 내 필기를 통째로 덮어씀, 빈 배열이면 삭제 |
 

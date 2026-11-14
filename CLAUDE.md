@@ -102,6 +102,10 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 - `POST /lessons/{lesson_id}/chat` (body: {message}) → 챗봇 답변 (+ 관련 page_no). 이 학생의 이전 대화(최근 N개)를 문맥으로 사용
 - `GET /lessons/{lesson_id}/chat` → 내 대화 기록
 
+### 캘린더
+- `GET /calendar?from=&to=` → {superschool_linked, events: [{id, title, start, end, all_day, source, category, lesson_id, lesson_status, course_name}]}
+  기간 안에 class_date가 있는 회차 (교사: 내 과목 전체, 학생: 등록 과목의 approved 이상). 슈퍼스쿨 학사 일정은 연동이 생기면 source="superschool"로 합친다
+
 ### 필기 (교사·학생)
 - `GET /lessons/{lesson_id}/annotations` → 내 필기 전체 ({pages: [{page_no, strokes, updated_at}]}, 필기가 있는 페이지만)
 - `PUT /lessons/{lesson_id}/annotations/{page_no}` (body: {strokes}) → 그 페이지 내 필기 전체를 덮어씀. 빈 배열이면 삭제

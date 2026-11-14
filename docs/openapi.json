@@ -1539,6 +1539,69 @@
         }
       }
     },
+    "/calendar": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "summary": "내 일정 (수업 회차)",
+        "description": "from~to(양 끝 포함)에 수업 날짜(class_date)가 있는 회차. 교사: 내 과목 전체 / 학생: 등록 과목의 승인된(approved 이상) 회차만. 수업 날짜에 시각이 없어 종일 일정으로 준다.",
+        "operationId": "calendar_calendar_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "2026-11-01"
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "2026-11-30"
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1835,6 +1898,130 @@
           "title"
         ],
         "title": "Body_upload_lesson_courses__course_id__lessons_post"
+      },
+      "CalendarEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "lesson-3"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "examples": [
+              "과학 2회차 · 광합성"
+            ]
+          },
+          "start": {
+            "type": "string",
+            "title": "Start",
+            "description": "종일 일정이면 YYYY-MM-DD, 시간이 있으면 ISO 날짜시간",
+            "examples": [
+              "2026-11-20"
+            ]
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "all_day": {
+            "type": "boolean",
+            "title": "All Day"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "superschool",
+              "lesson"
+            ],
+            "title": "Source"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category",
+            "description": "슈퍼스쿨 학사 일정 분류 (lesson이면 null)"
+          },
+          "lesson_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Id"
+          },
+          "lesson_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LessonStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "course_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "start",
+          "all_day",
+          "source"
+        ],
+        "title": "CalendarEvent"
+      },
+      "CalendarOut": {
+        "properties": {
+          "superschool_linked": {
+            "type": "boolean",
+            "title": "Superschool Linked",
+            "description": "슈퍼스쿨 연동 여부 (아직 연동 기능 없음 → 항상 false)"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarEvent"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "superschool_linked",
+          "events"
+        ],
+        "title": "CalendarOut"
       },
       "CaptionItem": {
         "properties": {

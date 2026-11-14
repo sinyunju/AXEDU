@@ -333,3 +333,22 @@ class TermExplainRequest(BaseModel):
 class TermExplainOut(BaseModel):
     word: str
     meaning: str = Field(examples=["잎 속에서 빛으로 양분을 만드는 작은 알갱이예요."])
+
+
+# ---------- 캘린더 ----------
+class CalendarEvent(BaseModel):
+    id: str = Field(examples=["lesson-3"])
+    title: str = Field(examples=["과학 2회차 · 광합성"])
+    start: str = Field(description="종일 일정이면 YYYY-MM-DD, 시간이 있으면 ISO 날짜시간", examples=["2026-11-20"])
+    end: str | None = None
+    all_day: bool
+    source: Literal["superschool", "lesson"]
+    category: str | None = Field(default=None, description="슈퍼스쿨 학사 일정 분류 (lesson이면 null)")
+    lesson_id: int | None = None
+    lesson_status: LessonStatus | None = None
+    course_name: str | None = None
+
+
+class CalendarOut(BaseModel):
+    superschool_linked: bool = Field(description="슈퍼스쿨 연동 여부 (아직 연동 기능 없음 → 항상 false)")
+    events: list[CalendarEvent]
