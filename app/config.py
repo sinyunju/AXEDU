@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     live_caption_interval_seconds: float = 15  # 같은 페이지 실시간 자막 LLM 호출 최소 간격
     chat_history_limit: int = 10  # 챗봇에 문맥으로 넘기는 이전 대화 수 (학생 본인 것만)
 
+    # 슈퍼스쿨 연동 (app/superschool). 실제 API를 받기 전까지는 mock
+    superschool_mock: bool = True
+    superschool_client_id: str = ""
+    superschool_client_secret: str = ""
+    superschool_authorize_url: str = ""
+    superschool_token_url: str = ""
+    superschool_api_base_url: str = ""
+    superschool_scope: str = ""
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.frontend_origins.split(",") if o.strip()]

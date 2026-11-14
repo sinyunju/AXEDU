@@ -47,6 +47,7 @@
 - **Quiz**: id, lesson_id, questions(JSON)  (회차당 1개)
 - **QuizAttempt**: id, quiz_id, student_id, answers(JSON), score, submitted_at  (학생별 기록)
 - **ChatMessage**: id, lesson_id, student_id, role(`user | assistant`), content, related_page(nullable), created_at  (학생별·회차별 대화 기록)
+- **SuperschoolAccount**: id, user_id(고유), superschool_id(고유), school, access_token, refresh_token, token_expires_at, linked_at  (슈퍼스쿨 계정 연결. 토큰은 응답에 넣지 않음)
 - **Annotation**(필기): user_id, lesson_id, page_no(셋이 PK), strokes(JSON: [{tool: `pen | highlighter`, color: `#rrggbb`, width, points: [[x, y], ...]}]), updated_at  (교사·학생 각자의 수업 자료 필기. 좌표·굵기는 페이지 크기 기준 0~1 비율)
 
 v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는다. 실시간 수업 상태는 Lesson.status=`live`와 Lesson.current_page로 관리한다.
@@ -105,6 +106,14 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 ### 캘린더
 - `GET /calendar?from=&to=` → {superschool_linked, events: [{id, title, start, end, all_day, source, category, lesson_id, lesson_status, course_name}]}
   기간 안에 class_date가 있는 회차 (교사: 내 과목 전체, 학생: 등록 과목의 approved 이상). 슈퍼스쿨 학사 일정은 연동이 생기면 source="superschool"로 합친다
+
+### 슈퍼스쿨 연동 (OAuth 2.0 인가 코드 방식 가정, 지금은 SUPERSCHOOL_MOCK=true)
+- `GET /auth/superschool/start?mode=login|link&redirect_uri&state&role?` → 슈퍼스쿨 화면으로 redirect (mock: 프론트 `/auth/superschool/mock`)
+- `POST /auth/superschool/callback` (body: {code, redirect_uri}) → {access_token, user}. 연결된 사용자가 없으면 계정 생성
+- `POST /auth/superschool/link` (body: {code, redirect_uri}) → UserOut / `DELETE /auth/superschool/link` → UserOut
+- redirect_uri는 FRONTEND_ORIGINS의 `/auth/superschool/callback`만 허용. 슈퍼스쿨 토큰·client_secret은 서버에만 (응답에 넣지 않음)
+- UserBrief/UserOut에 superschool_linked, school. 연결했으면 `GET /calendar`에 학사 일정(source="superschool") 포함
+- 구현: `app/superschool/` (mock.py, oauth.py — 가정한 슈퍼스쿨 API 형식은 oauth.py 맨 위)
 
 ### 필기 (교사·학생)
 - `GET /lessons/{lesson_id}/annotations` → 내 필기 전체 ({pages: [{page_no, strokes, updated_at}]}, 필기가 있는 페이지만)

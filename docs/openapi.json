@@ -1544,8 +1544,8 @@
         "tags": [
           "calendar"
         ],
-        "summary": "내 일정 (수업 회차)",
-        "description": "from~to(양 끝 포함)에 수업 날짜(class_date)가 있는 회차. 교사: 내 과목 전체 / 학생: 등록 과목의 승인된(approved 이상) 회차만. 수업 날짜에 시각이 없어 종일 일정으로 준다.",
+        "summary": "내 일정 (수업 회차 + 슈퍼스쿨 학사 일정)",
+        "description": "from~to(양 끝 포함)에 수업 날짜(class_date)가 있는 회차. 교사: 내 과목 전체 / 학생: 등록 과목의 승인된(approved 이상) 회차만. 수업 날짜에 시각이 없어 종일 일정으로 준다. 슈퍼스쿨 계정을 연결했으면 학사 일정(source=superschool, end는 마지막 날 포함)을 함께 준다. 학사 일정을 못 가져오면 수업 일정만 주고 superschool_error에 안내 문구를 넣는다.",
         "operationId": "calendar_calendar_get",
         "security": [
           {
@@ -1600,6 +1600,206 @@
             }
           }
         }
+      }
+    },
+    "/auth/superschool/start": {
+      "get": {
+        "tags": [
+          "superschool"
+        ],
+        "summary": "슈퍼스쿨 로그인·동의 화면으로 이동 (브라우저로 여는 주소)",
+        "description": "프론트가 window.location으로 이동시키는 주소. 슈퍼스쿨(목 모드는 프론트의 개발용 화면)로 redirect 한다. state는 프론트가 만들어 보관했다가 돌아왔을 때 같은지 확인한다.",
+        "operationId": "start_auth_superschool_start_get",
+        "parameters": [
+          {
+            "name": "mode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "login",
+                "link"
+              ],
+              "type": "string",
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "http://localhost:5173/auth/superschool/callback"
+              ],
+              "title": "Redirect Uri"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200,
+              "title": "State"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Role"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "로그인 화면에서 누른 버튼 (교사·학생). 목 모드에서만 쓰임",
+              "title": "Role"
+            },
+            "description": "로그인 화면에서 누른 버튼 (교사·학생). 목 모드에서만 쓰임"
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/superschool/callback": {
+      "post": {
+        "tags": [
+          "superschool"
+        ],
+        "summary": "슈퍼스쿨 계정으로 로그인 (없으면 계정 생성)",
+        "description": "슈퍼스쿨 계정이 이미 연결된 사용자가 있으면 그 계정으로, 없으면 새 계정을 만들어 로그인한다. 새 계정은 비밀번호가 없어 슈퍼스쿨로만 로그인한다.",
+        "operationId": "callback_auth_superschool_callback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuperschoolCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/superschool/link": {
+      "post": {
+        "tags": [
+          "superschool"
+        ],
+        "summary": "로그인한 계정에 슈퍼스쿨 계정 연결",
+        "operationId": "link_auth_superschool_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuperschoolCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "code 실패 또는 역할(교사·학생)이 다름"
+          },
+          "409": {
+            "description": "그 슈퍼스쿨 계정이 이미 다른 계정에 연결됨"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "superschool"
+        ],
+        "summary": "슈퍼스쿨 연결 해제",
+        "description": "저장한 슈퍼스쿨 토큰도 함께 지운다. 슈퍼스쿨로만 가입한 계정은 비밀번호가 없어 해제하면 다시 로그인할 수 없으므로 거부한다.",
+        "operationId": "unlink_auth_superschool_link_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/health": {
@@ -2006,7 +2206,19 @@
           "superschool_linked": {
             "type": "boolean",
             "title": "Superschool Linked",
-            "description": "슈퍼스쿨 연동 여부 (아직 연동 기능 없음 → 항상 false)"
+            "description": "슈퍼스쿨 계정 연결 여부 (true면 학사 일정이 events에 함께 들어감)"
+          },
+          "superschool_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superschool Error",
+            "description": "연결은 됐지만 학사 일정을 못 가져왔을 때 안내 문구"
           },
           "events": {
             "items": {
@@ -3180,6 +3392,32 @@
         "title": "Stroke",
         "description": "필기 한 획. 좌표·굵기는 페이지 크기 기준 0~1 비율이라 화면 크기가 달라도 같은 자리에 그려진다."
       },
+      "SuperschoolCodeRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Code",
+            "description": "슈퍼스쿨이 redirect_uri로 돌려준 인가 코드"
+          },
+          "redirect_uri": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Redirect Uri",
+            "description": "start 때 보낸 것과 같은 주소",
+            "examples": [
+              "http://localhost:5173/auth/superschool/callback"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "redirect_uri"
+        ],
+        "title": "SuperschoolCodeRequest"
+      },
       "TermExplainOut": {
         "properties": {
           "word": {
@@ -3247,6 +3485,27 @@
             ],
             "title": "Avatar Url",
             "description": "프로필 사진 주소 (/files/avatars/...), 없으면 null"
+          },
+          "superschool_linked": {
+            "type": "boolean",
+            "title": "Superschool Linked",
+            "description": "슈퍼스쿨 계정 연결 여부",
+            "default": false
+          },
+          "school": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School",
+            "description": "슈퍼스쿨에서 가져온 소속 (연결 안 했으면 null)",
+            "examples": [
+              "천천중학교 2학년 3반"
+            ]
           }
         },
         "type": "object",
@@ -3286,6 +3545,27 @@
             ],
             "title": "Avatar Url",
             "description": "프로필 사진 주소 (/files/avatars/...), 없으면 null"
+          },
+          "superschool_linked": {
+            "type": "boolean",
+            "title": "Superschool Linked",
+            "description": "슈퍼스쿨 계정 연결 여부",
+            "default": false
+          },
+          "school": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School",
+            "description": "슈퍼스쿨에서 가져온 소속 (연결 안 했으면 null)",
+            "examples": [
+              "천천중학교 2학년 3반"
+            ]
           },
           "created_at": {
             "type": "string",

@@ -36,6 +36,9 @@ class UserBrief(BaseModel):
     name: str
     role: Role
     avatar_url: str | None = Field(default=None, description="프로필 사진 주소 (/files/avatars/...), 없으면 null")
+    superschool_linked: bool = Field(default=False, description="슈퍼스쿨 계정 연결 여부")
+    school: str | None = Field(default=None, description="슈퍼스쿨에서 가져온 소속 (연결 안 했으면 null)",
+                               examples=["천천중학교 2학년 3반"])
 
 
 class UserOut(UserBrief):
@@ -350,5 +353,13 @@ class CalendarEvent(BaseModel):
 
 
 class CalendarOut(BaseModel):
-    superschool_linked: bool = Field(description="슈퍼스쿨 연동 여부 (아직 연동 기능 없음 → 항상 false)")
+    superschool_linked: bool = Field(description="슈퍼스쿨 계정 연결 여부 (true면 학사 일정이 events에 함께 들어감)")
+    superschool_error: str | None = Field(default=None, description="연결은 됐지만 학사 일정을 못 가져왔을 때 안내 문구")
     events: list[CalendarEvent]
+
+
+# ---------- 슈퍼스쿨 ----------
+class SuperschoolCodeRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=2048, description="슈퍼스쿨이 redirect_uri로 돌려준 인가 코드")
+    redirect_uri: str = Field(max_length=2048, examples=["http://localhost:5173/auth/superschool/callback"],
+                              description="start 때 보낸 것과 같은 주소")

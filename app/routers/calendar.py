@@ -1,4 +1,5 @@
-"""메인 화면 캘린더: 내 수업 회차 일정 (+ 나중에 슈퍼스쿨 학사 일정을 합칠 자리)."""
+"""메인 화면 캘린더: 내 수업 회차 일정 + (슈퍼스쿨 계정을 연결했으면) 학사 일정."""
+import logging
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,8 +9,12 @@ from app.db import get_session
 from app.deps import get_current_user
 from app.models import Course, Enrollment, Lesson, Role, User
 from app.permissions import STUDENT_VISIBLE_STATUSES
+from app.routers.superschool import valid_access_token
 from app.schemas import CalendarEvent, CalendarOut
+from app.services.users import superschool_account
+from app.superschool import SuperschoolClient, SuperschoolError, get_superschool_client
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["calendar"])
 
 MAX_RANGE_DAYS = 400
@@ -23,13 +28,16 @@ def _parse_day(value: str, name: str) -> date:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"{name}는 ISO 날짜(YYYY-MM-DD)여야 합니다")
 
 
-@router.get("/calendar", response_model=CalendarOut, summary="내 일정 (수업 회차)",
+@router.get("/calendar", response_model=CalendarOut, summary="내 일정 (수업 회차 + 슈퍼스쿨 학사 일정)",
             description="from~to(양 끝 포함)에 수업 날짜(class_date)가 있는 회차. 교사: 내 과목 전체 / "
-                        "학생: 등록 과목의 승인된(approved 이상) 회차만. 수업 날짜에 시각이 없어 종일 일정으로 준다.")
-def calendar(
+                        "학생: 등록 과목의 승인된(approved 이상) 회차만. 수업 날짜에 시각이 없어 종일 일정으로 준다. "
+                        "슈퍼스쿨 계정을 연결했으면 학사 일정(source=superschool, end는 마지막 날 포함)을 함께 준다. "
+                        "학사 일정을 못 가져오면 수업 일정만 주고 superschool_error에 안내 문구를 넣는다.")
+async def calendar(
     from_: str = Query(alias="from", examples=["2026-11-01"]),
     to: str = Query(examples=["2026-11-30"]),
     session: Session = Depends(get_session), user: User = Depends(get_current_user),
+    client: SuperschoolClient = Depends(get_superschool_client),
 ) -> CalendarOut:
     start, end = _parse_day(from_, "from"), _parse_day(to, "to")
     if end < start:
@@ -51,4 +59,21 @@ def calendar(
                       lesson_status=lesson.status, course_name=course.name)
         for lesson, course in rows
     ]
-    return CalendarOut(superschool_linked=False, events=events)
+
+    account = superschool_account(session, user.id)
+    error = None
+    if account is not None:
+        try:
+            token = await valid_access_token(session, account, client)
+            school_events = await client.get_events(token, start, end)
+            events += [
+                CalendarEvent(id=f"ss-{e.id}", title=e.title, start=e.start.isoformat(),
+                              end=e.end.isoformat() if e.end else None, all_day=True, source="superschool",
+                              category=e.category)
+                for e in school_events
+            ]
+        except SuperschoolError as e:
+            logger.warning("학사 일정 실패 user=%s: %s", user.id, e)
+            error = "슈퍼스쿨 학사 일정을 가져오지 못했어요. 연결을 다시 해 보세요"
+    events.sort(key=lambda e: (e.start, e.source != "superschool", e.title))
+    return CalendarOut(superschool_linked=account is not None, superschool_error=error, events=events)

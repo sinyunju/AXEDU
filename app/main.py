@@ -10,9 +10,10 @@ from pydantic import BaseModel
 from app.ai import get_ai_provider, get_image_provider
 from app.config import get_settings
 from app.db import init_db
-from app.routers import annotations, auth, calendar, chat, courses, lessons, quiz, ws
+from app.routers import annotations, auth, calendar, chat, courses, lessons, quiz, superschool, ws
 from app.services.generation import recover_stuck_generations
 from app.services.live import LiveHub
+from app.superschool import get_superschool_client
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI):
     # 설정 오류(MOCK_AI=false인데 키 없음 등)는 첫 요청이 아니라 시작 시점에 드러나게
     text, image = get_ai_provider(), get_image_provider()
     logger.info("AI provider: text=%s image=%s", text.name, image.name)
+    logger.info("슈퍼스쿨 연동: %s", get_superschool_client().name)
     init_db()
     if recovered := recover_stuck_generations():
         logger.warning("중단된 재구성 작업 %d건을 ready로 복구", recovered)
@@ -62,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(chat.router)
     app.include_router(annotations.router)
     app.include_router(calendar.router)
+    app.include_router(superschool.router)
     app.include_router(ws.router)
     # 실시간 수업 상태 (단일 프로세스 전제, app/services/live.py 참고)
     app.state.live = LiveHub(interval=settings.live_caption_interval_seconds)

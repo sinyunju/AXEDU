@@ -143,3 +143,15 @@ class Annotation(SQLModel, table=True):
     page_no: int = Field(primary_key=True)
     strokes: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
     updated_at: datetime = Field(default_factory=utcnow)
+
+
+class SuperschoolAccount(SQLModel, table=True):
+    """슈퍼스쿨 계정 연결 (사용자당 하나). 토큰은 서버에만 두고 API 응답에는 절대 넣지 않는다."""
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", unique=True)
+    superschool_id: str = Field(unique=True)  # 슈퍼스쿨 안의 사용자 id (계정 연결 기준)
+    school: str = ""  # 화면에 보일 소속. 예) "천천중학교 2학년 3반"
+    access_token: str
+    refresh_token: str | None = None
+    token_expires_at: datetime | None = None
+    linked_at: datetime = Field(default_factory=utcnow)

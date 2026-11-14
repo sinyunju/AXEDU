@@ -6,27 +6,15 @@ from app.ai.base import image_extension
 from app.db import get_session
 from app.deps import get_current_user
 from app.models import User
-from app.schemas import (AvatarOut, LoginRequest, LoginResponse, PasswordChange, ProfileUpdate, SignupRequest,
-                         UserBrief, UserOut)
+from app.schemas import AvatarOut, LoginRequest, LoginResponse, PasswordChange, ProfileUpdate, SignupRequest, UserOut
 from app.security import create_access_token, hash_password, verify_password
+from app.services.users import avatar_url, user_brief, user_out
 from app.storage import delete_file, save_file
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 AVATAR_SUBDIR = "avatars"
 MAX_AVATAR_BYTES = 2 * 1024 * 1024  # 프론트가 256px JPEG로 줄여 보내므로 넉넉함
-
-
-def avatar_url(user: User) -> str | None:
-    return f"/files/{user.avatar_path}" if user.avatar_path else None
-
-
-def user_brief(user: User) -> UserBrief:
-    return UserBrief(id=user.id, login_id=user.login_id, name=user.name, role=user.role, avatar_url=avatar_url(user))
-
-
-def user_out(user: User) -> UserOut:
-    return UserOut(**user_brief(user).model_dump(), created_at=user.created_at)
 
 
 @router.post("/signup", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -43,7 +31,7 @@ def signup(body: SignupRequest, session: Session = Depends(get_session)) -> User
         session.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "이미 사용 중인 아이디입니다")
     session.refresh(user)
-    return user_out(user)
+    return user_out(session, user)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -51,12 +39,12 @@ def login(body: LoginRequest, session: Session = Depends(get_session)) -> LoginR
     user = session.exec(select(User).where(User.login_id == body.login_id)).first()
     if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "아이디 또는 비밀번호가 올바르지 않습니다")
-    return LoginResponse(access_token=create_access_token(user.id, user.role), user=user_brief(user))
+    return LoginResponse(access_token=create_access_token(user.id, user.role), user=user_brief(session, user))
 
 
 @router.get("/me", response_model=UserOut)
-def me(user: User = Depends(get_current_user)) -> UserOut:
-    return user_out(user)
+def me(user: User = Depends(get_current_user), session: Session = Depends(get_session)) -> UserOut:
+    return user_out(session, user)
 
 
 @router.patch("/me", response_model=UserOut, summary="내 정보 수정 (보낸 필드만)",
@@ -72,7 +60,7 @@ def update_me(body: ProfileUpdate, user: User = Depends(get_current_user),
     session.commit()
     session.refresh(user)
     delete_file(old_avatar)
-    return user_out(user)
+    return user_out(session, user)
 
 
 @router.post("/me/avatar", response_model=AvatarOut, summary="프로필 사진 올리기",

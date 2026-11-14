@@ -50,6 +50,9 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | `LIVE_CAPTION_INTERVAL_SECONDS` | `15` | 같은 페이지 실시간 자막 호출 최소 간격 |
 | `CHAT_HISTORY_LIMIT` | `10` | 챗봇이 문맥으로 쓰는 이전 대화 수 |
 | `MAX_UPLOAD_MB`, `MAX_PDF_PAGES`, `PDF_RENDER_ZOOM` | `30`, `100`, `1.5` | PDF 업로드 제한·렌더링 배율 |
+| `SUPERSCHOOL_MOCK` | `true` | 슈퍼스쿨 연동을 가짜(정해진 계정·학사 일정)로 동작. 아래 "슈퍼스쿨 연동" 참고 |
+| `SUPERSCHOOL_CLIENT_ID`, `SUPERSCHOOL_CLIENT_SECRET` | — | `SUPERSCHOOL_MOCK=false`일 때 필수. 슈퍼스쿨이 발급하는 앱 이름표·비밀번호. secret은 `.env`에만 |
+| `SUPERSCHOOL_AUTHORIZE_URL`, `SUPERSCHOOL_TOKEN_URL`, `SUPERSCHOOL_API_BASE_URL`, `SUPERSCHOOL_SCOPE` | — | `SUPERSCHOOL_MOCK=false`일 때 슈퍼스쿨 OAuth·API 주소 |
 
 ### 같은 Wi-Fi의 다른 기기(태블릿·휴대폰)에서 접속하기
 
@@ -119,7 +122,10 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 |---|---|---|---|
 | POST | `/auth/signup` | 누구나 | `{login_id, password, name, role}` → 201 사용자 정보 (토큰 없음) |
 | POST | `/auth/login` | 누구나 | `{login_id, password}` → `{access_token, token_type, user: {id, login_id, name, role, avatar_url}}` |
-| GET | `/auth/me` | 로그인 | 내 정보 `{id, login_id, name, role, avatar_url, created_at}` |
+| GET | `/auth/me` | 로그인 | 내 정보 `{id, login_id, name, role, avatar_url, superschool_linked, school, created_at}` |
+| GET | `/auth/superschool/start` | 누구나 | `?mode=login|link&redirect_uri&state&role?` → 슈퍼스쿨 화면으로 307 redirect (브라우저로 이동) |
+| POST | `/auth/superschool/callback` | 누구나 | `{code, redirect_uri}` → `{access_token, token_type, user}` 슈퍼스쿨로 로그인 (처음이면 계정 생성) |
+| POST / DELETE | `/auth/superschool/link` | 로그인 | `{code, redirect_uri}` → 내 정보 (슈퍼스쿨 연결) / 연결 해제 → 내 정보 |
 | PATCH | `/auth/me` | 로그인 | 보낸 필드만 수정. `{name}` 이름 변경, `{avatar_url: null}` 프로필 사진 삭제 (아이디·역할은 못 바꿈) |
 | POST | `/auth/me/avatar` | 로그인 | multipart `file` (JPEG/PNG/WebP, 2MB 이하) → `{avatar_url}`. 예전 사진은 지움 |
 | POST | `/auth/me/password` | 로그인 | `{current, next}` → 204. 지금 비밀번호가 틀리면 400 `{"detail": "지금 비밀번호가 맞지 않아요"}` |
@@ -143,7 +149,7 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | GET | `/lessons/{id}/quiz/attempts/me` | 학생 | 내 풀이 기록 (최신순) |
 | POST | `/lessons/{id}/chat` | 학생 | `{message}` → `{question, answer}` (`answer.related_page`) |
 | GET | `/lessons/{id}/chat` | 학생 | 내 대화 기록 |
-| GET | `/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD` | 둘 다 | 기간 안(양 끝 포함)에 수업 날짜가 있는 회차 → `{superschool_linked: false, events: [{id, title, start, end, all_day, source: "lesson", category, lesson_id, lesson_status, course_name}]}`. 학생은 승인된 회차만. 수업 날짜에 시각이 없어 `all_day: true`. 최대 400일, ISO 날짜시간도 받음 |
+| GET | `/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD` | 둘 다 | 기간 안(양 끝 포함)에 수업 날짜가 있는 회차 → `{superschool_linked, superschool_error, events: [{id, title, start, end, all_day, source: "lesson" | "superschool", category, lesson_id, lesson_status, course_name}]}`. 학생은 승인된 회차만. 슈퍼스쿨을 연결했으면 학사 일정도 함께. 수업 날짜에 시각이 없어 `all_day: true`. 최대 400일, ISO 날짜시간도 받음 |
 | GET | `/lessons/{id}/annotations` | 둘 다 | 내 필기 전체 `{pages: [{page_no, strokes, updated_at}]}` (필기 있는 페이지만) |
 | PUT | `/lessons/{id}/annotations/{n}` | 둘 다 | `{strokes}` → 그 페이지 내 필기를 통째로 덮어씀, 빈 배열이면 삭제 |
 
@@ -246,6 +252,32 @@ ws.onclose = (e) => console.log("closed", e.code, e.reason);
 - 학생 화면은 프론트 또는 `scripts.ws_client student1 2`로 확인하세요.
 - `MOCK_AI=false`면 실제 자막 API가 호출됩니다 (빠른 모델, 재생 1회에 10회 안팎).
 
+## 슈퍼스쿨 연동 (OAuth 가정)
+
+슈퍼스쿨은 외부 서비스용 API를 공개하지 않아서, **"API를 받았다면 이렇게 붙는다"**를 구현해 두고 지금은 가짜로 동작합니다.
+
+| | `SUPERSCHOOL_MOCK=true` (기본) | `SUPERSCHOOL_MOCK=false` |
+|---|---|---|
+| 로그인·동의 화면 | 프론트의 개발용 화면 `/auth/superschool/mock` | 슈퍼스쿨 화면 (`SUPERSCHOOL_AUTHORIZE_URL`) |
+| 계정 | `mock:student` → 학생 "지우", `mock:teacher` → 교사 "김하늘", `mock:link` → 지금 계정과 같은 사람 | 슈퍼스쿨 `/me` 응답 |
+| 소속 | `천천중학교 2학년 3반` / `천천중학교 · 과학과` | `school_name` + 학년·반 또는 과목 |
+| 학사 일정 | 오늘 기준 동아리·상담 주간·재량휴업일·체험학습·기말고사·축제 | 슈퍼스쿨 `/calendar` 응답 |
+
+흐름 (OAuth 2.0 인가 코드 방식)
+
+1. 프론트가 `state`를 만들어 보관하고 `GET /auth/superschool/start?mode=login|link&redirect_uri=…&state=…&role=?`로 이동
+2. 백엔드가 슈퍼스쿨 로그인·동의 화면으로 redirect → 슈퍼스쿨이 `redirect_uri?code=…&state=…`로 돌려보냄
+3. 프론트가 `state`가 같은지 확인하고 `code`를 백엔드로 보냄
+   - 로그인: `POST /auth/superschool/callback {code, redirect_uri}` → `{access_token, user}` (처음이면 계정 생성)
+   - 계정 연결: `POST /auth/superschool/link {code, redirect_uri}` (로그인 필요) → 내 정보
+4. 백엔드가 `code`를 토큰으로 바꾸고(`client_secret` 사용) 사용자 정보·학사 일정을 받아 옴
+
+- `redirect_uri`는 `FRONTEND_ORIGINS`에 있는 주소의 `/auth/superschool/callback`만 허용합니다 (code가 엉뚱한 곳으로 가지 않게).
+- 슈퍼스쿨 토큰과 `client_secret`은 서버에만 두고 응답에 넣지 않습니다. 토큰이 만료되면 refresh_token으로 갱신합니다.
+- 연결 해제: `DELETE /auth/superschool/link`. 슈퍼스쿨로 가입한 계정(비밀번호 없음)은 해제할 수 없습니다.
+- 내 정보·로그인 응답의 `superschool_linked`, `school`, 그리고 `GET /calendar`의 학사 일정(`source: "superschool"`, `end`는 마지막 날 포함)으로 화면에 보여 줍니다. 학사 일정을 못 가져오면 수업 일정만 주고 `superschool_error`에 안내 문구를 넣습니다.
+- **실제 API를 받으면** `.env`에 `SUPERSCHOOL_MOCK=false`와 client_id·secret·주소를 넣고, 응답 필드 이름이 다르면 `app/superschool/oauth.py`의 `_profile`·`_event` 변환만 고치면 됩니다. 가정한 요청·응답 형식은 그 파일 맨 위에 적혀 있습니다.
+
 ## AI 동작 메모
 
 - 모든 출력은 "~해요"체, 짧은 문장. 원문에 없는 사실은 추가하지 않습니다 (챗봇의 기초 질문만 예외).
@@ -259,9 +291,10 @@ ws.onclose = (e) => console.log("closed", e.code, e.reason);
 app/
   main.py            앱 생성, CORS, /files, /health, 시작 시 작업
   config.py db.py models.py schemas.py security.py deps.py permissions.py storage.py pdf.py
-  routers/           auth, courses, lessons, quiz, chat, ws
-  services/          generation(재구성), live(WebSocket·실시간 자막), quiz, chat, content
+  routers/           auth, courses, lessons, quiz, chat, ws, annotations, calendar, superschool
+  services/          generation(재구성), live(WebSocket·실시간 자막), quiz, chat, content, users
   ai/                provider 인터페이스, mock, gateway, prompts, schemas
+  superschool/       슈퍼스쿨 연동 인터페이스, mock, oauth(실제 연동용)
 scripts/             seed, ai_smoke, ws_client, replay
 samples/             demo_lesson.pdf (3쪽 데모 자료), replay_photosynthesis.json
 tests/               pytest (MOCK 모드)
@@ -269,5 +302,5 @@ tests/               pytest (MOCK 모드)
 
 ## 해커톤 범위에서 하지 않은 것
 
-이메일 인증·비밀번호 찾기·소셜 로그인, DB 마이그레이션 도구(필요한 컬럼만 시작 시 자동 추가), 여러 프로세스 확장,
+이메일 인증·비밀번호 찾기, 실제 슈퍼스쿨 연동(구조만 구현, 지금은 mock), 슈퍼스쿨 토큰 암호화 저장, DB 마이그레이션 도구(필요한 컬럼만 시작 시 자동 추가), 여러 프로세스 확장,
 교사용 반 전체 퀴즈 결과 API, 퀴즈 재생성(삭제) API, `/files` 인증.
