@@ -1002,3 +1002,21 @@ input.input::-webkit-datetime-edit { padding: 0; line-height: 1.2; }
   .focus-line, .focus-char, .focus-face { animation: none; }
 }
 
+
+/* 과목·회차 정보 수정 */
+.btn-ghost-light { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.28); color: var(--on-hero); }
+.btn-ghost-light:hover { background: rgba(255, 255, 255, 0.24); border-color: rgba(255, 255, 255, 0.4); }
+.hero-edit { flex: 1; min-width: min(100%, 320px); max-width: 520px; }
+.hero-edit .field > span { color: var(--on-hero); opacity: 0.9; }
+.hero-edit .input { background: #fff; color: #121a35; border-color: transparent; }
+.hero-error { margin: 0; padding: 8px 12px; border-radius: var(--r-sm); background: rgba(255, 255, 255, 0.92); color: var(--bad); font-size: 0.88rem; font-weight: 560; }
+.lesson-item.editing { background: var(--surface); border-color: var(--primary-200); }
+.lesson-edit { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; width: 100%; }
+.lesson-edit .grow { flex: 1 1 200px; min-width: 0; }
+.lesson-edit-actions { display: flex; gap: 8px; }
+.lesson-edit-error, .lesson-edit-note { flex-basis: 100%; margin: 0; }
+@media (max-width: 640px) {
+  .lesson-actions > .btn-icon { flex: none; }
+  .lesson-edit-actions { width: 100%; }
+  .lesson-edit-actions > * { flex: 1; }
+}

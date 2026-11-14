@@ -133,8 +133,10 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | GET | `/courses` | 둘 다 | 교사: 만든 과목 / 학생: 등록 과목. 항목마다 `lesson_count`(학생은 승인된 회차만 셈), 학생에게 `invite_code`는 `null` |
 | POST | `/courses/join` | 학생 | `{invite_code}` (대소문자 무시) |
 | GET | `/courses/{id}` | 둘 다 | 과목 + 회차 목록 |
+| PATCH | `/courses/{id}` | 교사 | `{name?, description?}` 보낸 것만 수정 (초대 코드는 그대로) |
 | GET | `/courses/{id}/students` | 교사 | 등록 학생 |
 | POST | `/courses/{id}/lessons` | 교사 | multipart `file`(PDF), `session_no`, `title`, `class_date?`(`YYYY-MM-DD`) |
+| PATCH | `/lessons/{id}` | 교사 | `{session_no?, title?, class_date?}` 회차 정보 수정. `class_date: null`이면 날짜 지움, 회차 번호가 겹치면 409. 수업 자료·페이지는 그대로 |
 | POST | `/lessons/{id}/generate` | 교사 | 재구성 시작 (202, 진행률은 `GET /lessons/{id}`의 `progress`) |
 | GET | `/lessons/{id}` | 둘 다 | 회차 + 페이지. 학생에게는 `source_text`(원문)와 `image_suggestion`(AI 이미지 제안)이 `null`, 원본 페이지 이미지 `image_url`은 그대로 내려감. 승인 안 된 페이지의 쉬운 문장·낱말·생성 이미지는 비어 있음 |
 | PUT | `/lessons/{id}/pages/{n}` | 교사 | `easy_sentences`, `hard_words` 수정 |

@@ -52,6 +52,47 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * 내 정보 수정 (보낸 필드만)
+         * @description `{name}`으로 이름 변경, `{avatar_url: null}`로 프로필 사진 삭제. 아이디·역할은 바꿀 수 없다.
+         */
+        patch: operations["update_me_auth_me_patch"];
+        trace?: never;
+    };
+    "/auth/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 프로필 사진 올리기
+         * @description multipart `file` (JPEG/PNG/WebP, 2MB 이하). 예전 사진은 지운다. 사진 주소는 /files 아래라 로그인 없이 열리지만 파일명은 추측할 수 없는 UUID다.
+         */
+        post: operations["upload_avatar_auth_me_avatar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 비밀번호 변경 */
+        post: operations["change_password_auth_me_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -73,23 +114,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/courses/join": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 초대 코드로 과목 등록 (학생) */
-        post: operations["join_course_courses_join_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/courses/{course_id}": {
         parameters: {
             query?: never;
@@ -101,6 +125,27 @@ export interface paths {
         get: operations["get_course_courses__course_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 과목 이름·설명 수정 (교사)
+         * @description 보낸 필드만 바꾼다. 초대 코드는 그대로.
+         */
+        patch: operations["update_course_courses__course_id__patch"];
+        trace?: never;
+    };
+    "/courses/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 초대 코드로 과목 등록 (학생) */
+        post: operations["join_course_courses_join_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -158,7 +203,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * 회차 정보 수정 (교사)
+         * @description 회차 번호·제목·수업 날짜 중 보낸 것만 바꾼다. class_date에 null을 보내면 날짜를 지운다. 수업 자료(PDF)와 페이지 내용은 바뀌지 않으며, 수업 중이어도 바꿀 수 있다.
+         */
+        patch: operations["update_lesson_lessons__lesson_id__patch"];
         trace?: never;
     };
     "/lessons/{lesson_id}/generate": {
@@ -196,6 +245,26 @@ export interface paths {
         /** 쉬운 문장·어려운 낱말 수정 (교사) */
         put: operations["update_page_lessons__lesson_id__pages__page_no__put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lessons/{lesson_id}/pages/{page_no}/terms/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 낱말 뜻 AI로 채우기 (교사)
+         * @description 그 페이지 글을 문맥으로 낱말의 쉬운 뜻을 만들어 돌려준다. 저장하지 않으므로, 교사가 확인한 뒤 `PUT /lessons/{id}/pages/{n}`의 hard_words로 저장한다.
+         */
+        post: operations["explain_term_lessons__lesson_id__pages__page_no__terms_explain_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -393,6 +462,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 내 일정 (수업 회차 + 슈퍼스쿨 학사 일정)
+         * @description from~to(양 끝 포함)에 수업 날짜(class_date)가 있는 회차. 교사: 내 과목 전체 / 학생: 등록 과목의 승인된(approved 이상) 회차만. 수업 날짜에 시각이 없어 종일 일정으로 준다. 슈퍼스쿨 계정을 연결했으면 학사 일정(source=superschool, end는 마지막 날 포함)을 함께 준다. 학사 일정을 못 가져오면 수업 일정만 주고 superschool_error에 안내 문구를 넣는다.
+         */
+        get: operations["calendar_calendar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/superschool/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 슈퍼스쿨 로그인·동의 화면으로 이동 (브라우저로 여는 주소)
+         * @description 프론트가 window.location으로 이동시키는 주소. 슈퍼스쿨(목 모드는 프론트의 개발용 화면)로 redirect 한다. state는 프론트가 만들어 보관했다가 돌아왔을 때 같은지 확인한다.
+         */
+        get: operations["start_auth_superschool_start_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/superschool/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 슈퍼스쿨 계정으로 로그인 (없으면 계정 생성)
+         * @description 슈퍼스쿨 계정이 이미 연결된 사용자가 있으면 그 계정으로, 없으면 새 계정을 만들어 로그인한다. 새 계정은 비밀번호가 없어 슈퍼스쿨로만 로그인한다.
+         */
+        post: operations["callback_auth_superschool_callback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/superschool/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 로그인한 계정에 슈퍼스쿨 계정 연결 */
+        post: operations["link_auth_superschool_link_post"];
+        /**
+         * 슈퍼스쿨 연결 해제
+         * @description 저장한 슈퍼스쿨 토큰도 함께 지운다. 슈퍼스쿨로만 가입한 계정은 비밀번호가 없어 해제하면 다시 로그인할 수 없으므로 거부한다.
+         */
+        delete: operations["unlink_auth_superschool_link_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -494,6 +644,16 @@ export interface components {
             /** Page No */
             page_no: number | null;
         };
+        /** AvatarOut */
+        AvatarOut: {
+            /** Avatar Url */
+            avatar_url: string;
+        };
+        /** Body_upload_avatar_auth_me_avatar_post */
+        Body_upload_avatar_auth_me_avatar_post: {
+            /** File */
+            file: string;
+        };
         /** Body_upload_lesson_courses__course_id__lessons_post */
         Body_upload_lesson_courses__course_id__lessons_post: {
             /**
@@ -513,6 +673,59 @@ export interface components {
              * @description 수업 날짜 (YYYY-MM-DD)
              */
             class_date?: string | null;
+        };
+        /** CalendarEvent */
+        CalendarEvent: {
+            /**
+             * Id
+             * @example lesson-3
+             */
+            id: string;
+            /**
+             * Title
+             * @example 과학 2회차 · 광합성
+             */
+            title: string;
+            /**
+             * Start
+             * @description 종일 일정이면 YYYY-MM-DD, 시간이 있으면 ISO 날짜시간
+             * @example 2026-11-20
+             */
+            start: string;
+            /** End */
+            end?: string | null;
+            /** All Day */
+            all_day: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "superschool" | "lesson";
+            /**
+             * Category
+             * @description 슈퍼스쿨 학사 일정 분류 (lesson이면 null)
+             */
+            category?: string | null;
+            /** Lesson Id */
+            lesson_id?: number | null;
+            lesson_status?: components["schemas"]["LessonStatus"] | null;
+            /** Course Name */
+            course_name?: string | null;
+        };
+        /** CalendarOut */
+        CalendarOut: {
+            /**
+             * Superschool Linked
+             * @description 슈퍼스쿨 계정 연결 여부 (true면 학사 일정이 events에 함께 들어감)
+             */
+            superschool_linked: boolean;
+            /**
+             * Superschool Error
+             * @description 연결은 됐지만 학사 일정을 못 가져왔을 때 안내 문구
+             */
+            superschool_error?: string | null;
+            /** Events */
+            events: components["schemas"]["CalendarEvent"][];
         };
         /** CaptionItem */
         CaptionItem: {
@@ -649,6 +862,22 @@ export interface components {
              */
             joined_at: string;
         };
+        /**
+         * CourseUpdate
+         * @description 보낸 필드만 바꾼다.
+         */
+        CourseUpdate: {
+            /**
+             * Name
+             * @example 과학
+             */
+            name?: string | null;
+            /**
+             * Description
+             * @example 2학년 3반 2학기
+             */
+            description?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -759,6 +988,28 @@ export interface components {
             created_at: string;
             /** Pages */
             pages: components["schemas"]["PageOut"][];
+        };
+        /**
+         * LessonInfoUpdate
+         * @description 회차 정보 수정. 보낸 필드만 바꾸고, class_date에 null을 보내면 날짜를 지운다. 수업 자료(PDF)는 바꾸지 않는다.
+         */
+        LessonInfoUpdate: {
+            /**
+             * Session No
+             * @example 2
+             */
+            session_no?: number | null;
+            /**
+             * Title
+             * @example 광합성
+             */
+            title?: string | null;
+            /**
+             * Class Date
+             * @description YYYY-MM-DD, null이면 날짜 지움
+             * @example 2026-11-20
+             */
+            class_date?: string | null;
         };
         /** LessonOut */
         LessonOut: {
@@ -895,6 +1146,35 @@ export interface components {
             /** Transcript Updated At */
             transcript_updated_at: string | null;
         };
+        /** PasswordChange */
+        PasswordChange: {
+            /**
+             * Current
+             * @example pass1234
+             */
+            current: string;
+            /**
+             * Next
+             * @example newpass1
+             */
+            next: string;
+        };
+        /**
+         * ProfileUpdate
+         * @description 보낸 필드만 바꾼다. avatar_url은 null만 허용 (사진 삭제). 사진 올리기는 POST /auth/me/avatar.
+         */
+        ProfileUpdate: {
+            /**
+             * Name
+             * @example 김선생
+             */
+            name?: string | null;
+            /**
+             * Avatar Url
+             * @description null을 보내면 프로필 사진 삭제
+             */
+            avatar_url?: null;
+        };
         /** QuizOut */
         QuizOut: {
             /** Id */
@@ -1001,6 +1281,38 @@ export interface components {
                 number
             ][];
         };
+        /** SuperschoolCodeRequest */
+        SuperschoolCodeRequest: {
+            /**
+             * Code
+             * @description 슈퍼스쿨이 redirect_uri로 돌려준 인가 코드
+             */
+            code: string;
+            /**
+             * Redirect Uri
+             * @description start 때 보낸 것과 같은 주소
+             * @example http://localhost:5173/auth/superschool/callback
+             */
+            redirect_uri: string;
+        };
+        /** TermExplainOut */
+        TermExplainOut: {
+            /** Word */
+            word: string;
+            /**
+             * Meaning
+             * @example 잎 속에서 빛으로 양분을 만드는 작은 알갱이예요.
+             */
+            meaning: string;
+        };
+        /** TermExplainRequest */
+        TermExplainRequest: {
+            /**
+             * Word
+             * @example 엽록체
+             */
+            word: string;
+        };
         /** UserBrief */
         UserBrief: {
             /** Id */
@@ -1010,6 +1322,23 @@ export interface components {
             /** Name */
             name: string;
             role: components["schemas"]["Role"];
+            /**
+             * Avatar Url
+             * @description 프로필 사진 주소 (/files/avatars/...), 없으면 null
+             */
+            avatar_url?: string | null;
+            /**
+             * Superschool Linked
+             * @description 슈퍼스쿨 계정 연결 여부
+             * @default false
+             */
+            superschool_linked: boolean;
+            /**
+             * School
+             * @description 슈퍼스쿨에서 가져온 소속 (연결 안 했으면 null)
+             * @example 천천중학교 2학년 3반
+             */
+            school?: string | null;
         };
         /** UserOut */
         UserOut: {
@@ -1020,6 +1349,23 @@ export interface components {
             /** Name */
             name: string;
             role: components["schemas"]["Role"];
+            /**
+             * Avatar Url
+             * @description 프로필 사진 주소 (/files/avatars/...), 없으면 null
+             */
+            avatar_url?: string | null;
+            /**
+             * Superschool Linked
+             * @description 슈퍼스쿨 계정 연결 여부
+             * @default false
+             */
+            superschool_linked: boolean;
+            /**
+             * School
+             * @description 슈퍼스쿨에서 가져온 소속 (연결 안 했으면 null)
+             * @example 천천중학교 2학년 3반
+             */
+            school?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1134,6 +1480,110 @@ export interface operations {
             };
         };
     };
+    update_me_auth_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_avatar_auth_me_avatar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_avatar_auth_me_avatar_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvatarOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_auth_me_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 지금 비밀번호가 틀림 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_courses_courses_get: {
         parameters: {
             query?: never;
@@ -1187,6 +1637,72 @@ export interface operations {
             };
         };
     };
+    get_course_courses__course_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_course_courses__course_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                course_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CourseUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     join_course_courses_join_post: {
         parameters: {
             query?: never;
@@ -1207,37 +1723,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JoinResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_course_courses__course_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                course_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CourseDetail"];
                 };
             };
             /** @description Validation Error */
@@ -1369,6 +1854,48 @@ export interface operations {
             };
         };
     };
+    update_lesson_lessons__lesson_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lesson_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LessonInfoUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LessonOut"];
+                };
+            };
+            /** @description 같은 과목에 그 회차 번호가 이미 있음 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     generate_lesson_lessons__lesson_id__generate_post: {
         parameters: {
             query?: never;
@@ -1462,6 +1989,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    explain_term_lessons__lesson_id__pages__page_no__terms_explain_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                lesson_id: number;
+                page_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TermExplainRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TermExplainOut"];
                 };
             };
             /** @description Validation Error */
@@ -1956,6 +2519,171 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calendar_calendar_get: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_auth_superschool_start_get: {
+        parameters: {
+            query: {
+                mode: "login" | "link";
+                redirect_uri: string;
+                state: string;
+                /** @description 로그인 화면에서 누른 버튼 (교사·학생). 목 모드에서만 쓰임 */
+                role?: components["schemas"]["Role"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            307: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    callback_auth_superschool_callback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuperschoolCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_auth_superschool_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuperschoolCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description code 실패 또는 역할(교사·학생)이 다름 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 그 슈퍼스쿨 계정이 이미 다른 계정에 연결됨 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_auth_superschool_link_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
                 };
             };
         };

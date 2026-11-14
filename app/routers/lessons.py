@@ -14,8 +14,8 @@ from app.deps import get_current_user, require_teacher
 from app.models import Lesson, LessonStatus, Page, PageLive, Role, User
 from app.pdf import PdfError, remove_files, render_pdf
 from app.permissions import get_accessible_lesson, get_owned_course, get_owned_lesson
-from app.schemas import (ImageRequest, LessonDetail, LessonOut, PageOut, PageUpdate, PageView, TermExplainOut,
-                         TermExplainRequest)
+from app.schemas import (ImageRequest, LessonDetail, LessonInfoUpdate, LessonOut, PageOut, PageUpdate, PageView,
+                         TermExplainOut, TermExplainRequest)
 from app.services.generation import run_generation
 from app.services.live import normalize_captions
 from app.storage import GENERATED_SUBDIR, delete_file, save_file
@@ -174,6 +174,33 @@ def generate_lesson(
     session.commit()
     session.refresh(lesson)
     background_tasks.add_task(run_generation, lesson.id, provider, get_settings().generate_concurrency)
+    return lesson_out(session, lesson)
+
+
+@router.patch("/lessons/{lesson_id}", response_model=LessonOut, summary="회차 정보 수정 (교사)",
+              description="회차 번호·제목·수업 날짜 중 보낸 것만 바꾼다. class_date에 null을 보내면 날짜를 지운다. "
+                          "수업 자료(PDF)와 페이지 내용은 바뀌지 않으며, 수업 중이어도 바꿀 수 있다.",
+              responses={409: {"description": "같은 과목에 그 회차 번호가 이미 있음"}})
+def update_lesson(
+    lesson_id: int, body: LessonInfoUpdate,
+    session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+) -> LessonOut:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    if body.session_no is not None and body.session_no != lesson.session_no:
+        if _session_no_taken(session, lesson.course_id, body.session_no):
+            raise HTTPException(status.HTTP_409_CONFLICT, f"{body.session_no}회차가 이미 있습니다")
+        lesson.session_no = body.session_no
+    if body.title is not None:
+        lesson.title = body.title
+    if "class_date" in body.model_fields_set:
+        lesson.class_date = body.class_date
+    session.add(lesson)
+    try:
+        session.commit()
+    except IntegrityError:  # 동시 수정으로 회차 번호가 겹친 경우
+        session.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, f"{body.session_no}회차가 이미 있습니다")
+    session.refresh(lesson)
     return lesson_out(session, lesson)
 
 

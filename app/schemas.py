@@ -84,6 +84,42 @@ class CourseCreate(BaseModel):
     description: str = Field(default="", max_length=1000, examples=["2학기 과학 수업"])
 
 
+def _strip_not_blank(v: str | None, label: str) -> str | None:
+    if v is None:
+        return v
+    if not v.strip():
+        raise ValueError(f"{label}을 입력해 주세요")
+    return v.strip()
+
+
+class CourseUpdate(BaseModel):
+    """보낸 필드만 바꾼다."""
+    name: str | None = Field(default=None, min_length=1, max_length=100, examples=["과학"])
+    description: str | None = Field(default=None, max_length=1000, examples=["2학년 3반 2학기"])
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, v: str | None) -> str | None:
+        return _strip_not_blank(v, "과목 이름")
+
+    @field_validator("description")
+    @classmethod
+    def _desc(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else v
+
+
+class LessonInfoUpdate(BaseModel):
+    """회차 정보 수정. 보낸 필드만 바꾸고, class_date에 null을 보내면 날짜를 지운다. 수업 자료(PDF)는 바꾸지 않는다."""
+    session_no: int | None = Field(default=None, ge=1, examples=[2])
+    title: str | None = Field(default=None, min_length=1, max_length=200, examples=["광합성"])
+    class_date: date | None = Field(default=None, description="YYYY-MM-DD, null이면 날짜 지움", examples=["2026-11-20"])
+
+    @field_validator("title")
+    @classmethod
+    def _title(cls, v: str | None) -> str | None:
+        return _strip_not_blank(v, "수업 제목")
+
+
 class CourseOut(BaseModel):
     id: int
     name: str

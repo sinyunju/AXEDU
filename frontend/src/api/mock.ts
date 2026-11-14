@@ -13,7 +13,9 @@ import type {
   ChatMessage,
   ChatReply,
   Course,
+  CourseInput,
   Lesson,
+  LessonInfoInput,
   LessonPage,
   LessonSummary,
   NewLessonInput,
@@ -512,6 +514,19 @@ export const mockApi: Api & {
     return toCourse(c, u);
   },
 
+  async updateCourse(id: string, input: CourseInput): Promise<Course> {
+    await delay();
+    const u = currentUser();
+    const c = courses().find((x) => x.id === id);
+    if (!c || !canAccessCourse(u, id)) throw fail(404, '과목을 찾을 수 없습니다');
+    if (u.role !== 'teacher') throw fail(403, '교사만 할 수 있습니다');
+    const name = input.name?.trim();
+    if (input.name !== undefined && !name) throw fail(422, '과목 이름을 입력해 주세요');
+    const updated: MockCourse = { ...c, ...(name ? { name } : {}), ...(input.subject !== undefined ? { subject: input.subject.trim() } : {}) };
+    save(KEYS.courses, courses().map((x) => (x.id === id ? updated : x)));
+    return toCourse(updated, u);
+  },
+
   async joinCourse(code: string): Promise<Course> {
     await delay();
     const u = currentUser();
@@ -536,6 +551,20 @@ export const mockApi: Api & {
       .filter((l) => u.role === 'teacher' || OPEN_TO_STUDENTS.includes(l.status))
       .sort((a, b) => a.sessionNo - b.sessionNo)
       .map(toSummary);
+  },
+
+  async updateLessonInfo(lessonId: string, _courseId: string, input: LessonInfoInput): Promise<LessonSummary> {
+    await delay();
+    const l = findLesson(lessonId, { teacherOnly: true });
+    if (input.title !== undefined && !input.title.trim()) throw fail(422, '수업 제목을 입력해 주세요');
+    if (input.sessionNo !== undefined && input.sessionNo !== l.sessionNo &&
+        lessons().some((x) => x.courseId === l.courseId && x.sessionNo === input.sessionNo))
+      throw fail(409, `${input.sessionNo}회차가 이미 있습니다`);
+    return toSummary(patchLesson(lessonId, {
+      ...(input.sessionNo !== undefined ? { sessionNo: input.sessionNo } : {}),
+      ...(input.title !== undefined ? { title: input.title.trim() } : {}),
+      ...(input.classDate !== undefined ? { classDate: input.classDate ?? undefined } : {}),
+    }));
   },
 
   async createLesson(courseId: string, input: NewLessonInput): Promise<Lesson> {

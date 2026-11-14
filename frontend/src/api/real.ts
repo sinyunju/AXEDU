@@ -8,7 +8,9 @@ import type {
   ChatMessage,
   ChatReply,
   Course,
+  CourseInput,
   Lesson,
+  LessonInfoInput,
   LessonPage,
   LessonStatus,
   LessonSummary,
@@ -228,6 +230,13 @@ export const realApi = {
     const c = await http<S['CourseDetail']>(`/courses/${id}`);
     return toCourse(c, c.lessons.length);
   },
+  /** 과목 이름·설명 수정 (교사). 초대 코드는 그대로 */
+  async updateCourse(id: string, input: CourseInput): Promise<Course> {
+    const body: S['CourseUpdate'] = {};
+    if (input.name !== undefined) body.name = input.name;
+    if (input.subject !== undefined) body.description = input.subject;
+    return toCourse(await http<S['CourseOut']>(`/courses/${id}`, { method: 'PATCH', body: JSON.stringify(body) }));
+  },
   async joinCourse(code: string): Promise<Course> {
     const res = await http<S['JoinResponse']>('/courses/join', post({ invite_code: code.trim().toUpperCase() } satisfies S['JoinRequest']));
     return toCourse(res.course);
@@ -238,6 +247,15 @@ export const realApi = {
   async listLessons(courseId: string): Promise<LessonSummary[]> {
     const c = await http<S['CourseDetail']>(`/courses/${courseId}`);
     return c.lessons.map((l) => toSummary(l, courseId));
+  },
+  /** 회차 번호·제목·수업 날짜 수정 (교사). 같은 회차 번호가 있으면 409 */
+  async updateLessonInfo(lessonId: string, courseId: string, input: LessonInfoInput): Promise<LessonSummary> {
+    const body: S['LessonInfoUpdate'] = {};
+    if (input.sessionNo !== undefined) body.session_no = input.sessionNo;
+    if (input.title !== undefined) body.title = input.title;
+    if (input.classDate !== undefined) body.class_date = input.classDate;
+    const l = await http<S['LessonOut']>(`/lessons/${lessonId}`, { method: 'PATCH', body: JSON.stringify(body) });
+    return toSummary(l, courseId);
   },
   /** PDF·회차 번호·제목·날짜를 multipart로 한 번에 올림 (AI 변환은 generateLesson으로 따로 시작) */
   async createLesson(courseId: string, input: NewLessonInput): Promise<Lesson> {

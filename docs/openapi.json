@@ -321,30 +321,47 @@
         ]
       }
     },
-    "/courses/join": {
-      "post": {
+    "/courses/{course_id}": {
+      "patch": {
         "tags": [
           "courses"
         ],
-        "summary": "초대 코드로 과목 등록 (학생)",
-        "operationId": "join_course_courses_join_post",
+        "summary": "과목 이름·설명 수정 (교사)",
+        "description": "보낸 필드만 바꾼다. 초대 코드는 그대로.",
+        "operationId": "update_course_courses__course_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "course_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Course Id"
+            }
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JoinRequest"
+                "$ref": "#/components/schemas/CourseUpdate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
-          "201": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JoinResponse"
+                  "$ref": "#/components/schemas/CourseOut"
                 }
               }
             }
@@ -359,15 +376,8 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/courses/{course_id}": {
+        }
+      },
       "get": {
         "tags": [
           "courses"
@@ -412,6 +422,52 @@
             }
           }
         }
+      }
+    },
+    "/courses/join": {
+      "post": {
+        "tags": [
+          "courses"
+        ],
+        "summary": "초대 코드로 과목 등록 (학생)",
+        "operationId": "join_course_courses_join_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/courses/{course_id}/students": {
@@ -565,6 +621,65 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "회차 정보 수정 (교사)",
+        "description": "회차 번호·제목·수업 날짜 중 보낸 것만 바꾼다. class_date에 null을 보내면 날짜를 지운다. 수업 자료(PDF)와 페이지 내용은 바뀌지 않으며, 수업 중이어도 바꿀 수 있다.",
+        "operationId": "update_lesson_lessons__lesson_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LessonInfoUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LessonOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "같은 과목에 그 회차 번호가 이미 있음"
           },
           "422": {
             "description": "Validation Error",
@@ -2515,6 +2630,44 @@
         ],
         "title": "CourseStudent"
       },
+      "CourseUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "examples": [
+              "과학"
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "examples": [
+              "2학년 3반 2학기"
+            ]
+          }
+        },
+        "type": "object",
+        "title": "CourseUpdate",
+        "description": "보낸 필드만 바꾼다."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2780,6 +2933,60 @@
           "pages"
         ],
         "title": "LessonDetail"
+      },
+      "LessonInfoUpdate": {
+        "properties": {
+          "session_no": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session No",
+            "examples": [
+              2
+            ]
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "examples": [
+              "광합성"
+            ]
+          },
+          "class_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Date",
+            "description": "YYYY-MM-DD, null이면 날짜 지움",
+            "examples": [
+              "2026-11-20"
+            ]
+          }
+        },
+        "type": "object",
+        "title": "LessonInfoUpdate",
+        "description": "회차 정보 수정. 보낸 필드만 바꾸고, class_date에 null을 보내면 날짜를 지운다. 수업 자료(PDF)는 바꾸지 않는다."
       },
       "LessonOut": {
         "properties": {

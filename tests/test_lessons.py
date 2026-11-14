@@ -184,3 +184,33 @@ def test_explain_term(client, ctx):
                        headers=ctx["t1"]["headers"]).status_code == 404
     for bad in ({"word": "   "}, {"word": ""}, {"word": "가" * 41}, {}):
         assert client.post(url, json=bad, headers=ctx["t1"]["headers"]).status_code == 422
+
+
+# ---------- 회차 정보 수정 ----------
+def test_update_lesson_info(client, ctx):
+    cid = ctx["course"]["id"]
+    first = upload(client, ctx["t1"], cid, session_no=1, title="광합성", class_date="2026-11-20").json()
+    upload(client, ctx["t1"], cid, session_no=2, title="호흡")
+    url = f"/lessons/{first['id']}"
+    h = ctx["t1"]["headers"]
+
+    r = client.patch(url, json={"title": "  광합성 (1) ", "session_no": 3}, headers=h)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["title"] == "광합성 (1)" and body["session_no"] == 3 and body["class_date"] == "2026-11-20"
+    assert body["page_count"] == first["page_count"]  # 자료는 그대로
+    # 날짜 변경·삭제 (null), 안 보내면 그대로
+    assert client.patch(url, json={"class_date": "2026-12-01"}, headers=h).json()["class_date"] == "2026-12-01"
+    assert client.patch(url, json={"title": "광합성"}, headers=h).json()["class_date"] == "2026-12-01"
+    assert client.patch(url, json={"class_date": None}, headers=h).json()["class_date"] is None
+    # 같은 번호로 바꾸는 건 괜찮고, 다른 회차 번호와 겹치면 409
+    assert client.patch(url, json={"session_no": 3}, headers=h).status_code == 200
+    assert client.patch(url, json={"session_no": 2}, headers=h).status_code == 409
+    courses = client.get(f"/courses/{cid}", headers=h).json()["lessons"]
+    assert sorted((l["session_no"], l["title"]) for l in courses) == [(2, "호흡"), (3, "광합성")]
+
+    for bad in ({"title": "  "}, {"session_no": 0}, {"class_date": "2026-11-20T10:00:00"}, {"title": "가" * 201}):
+        assert client.patch(url, json=bad, headers=h).status_code == 422
+    assert client.patch(url, json={"title": "x"}, headers=ctx["t2"]["headers"]).status_code == 403
+    assert client.patch(url, json={"title": "x"}, headers=ctx["s1"]["headers"]).status_code == 403
+    assert client.patch("/lessons/9999", json={"title": "x"}, headers=h).status_code == 404

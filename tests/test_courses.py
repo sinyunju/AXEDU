@@ -140,3 +140,29 @@ def test_lesson_count(client, session, users):
     assert student[0]["lesson_count"] == 3  # approved / live / ended만
     detail = client.get(f"/courses/{c['id']}", headers=users["s1"]["headers"]).json()
     assert detail["lesson_count"] == len(detail["lessons"]) == 3
+
+
+# ---------- 과목 수정 ----------
+def test_update_course(client):
+    from tests.helpers import make_user
+
+    t1 = make_user(client, "tchA", "teacher")
+    t2 = make_user(client, "tchB", "teacher")
+    s1 = make_user(client, "stuA", "student")
+    c = client.post("/courses", json={"name": "과학", "description": "1반"}, headers=t1["headers"]).json()
+    url = f"/courses/{c['id']}"
+
+    r = client.patch(url, json={"name": "  생명과학 "}, headers=t1["headers"])
+    assert r.status_code == 200
+    assert r.json()["name"] == "생명과학" and r.json()["description"] == "1반"
+    assert r.json()["invite_code"] == c["invite_code"]  # 초대 코드는 그대로
+    r = client.patch(url, json={"description": "2학년 3반"}, headers=t1["headers"])
+    assert r.json()["name"] == "생명과학" and r.json()["description"] == "2학년 3반"
+    assert client.patch(url, json={"description": ""}, headers=t1["headers"]).json()["description"] == ""
+    assert client.get(url, headers=t1["headers"]).json()["name"] == "생명과학"
+
+    for bad in ({"name": "   "}, {"name": ""}, {"name": "가" * 101}, {"description": "가" * 1001}):
+        assert client.patch(url, json=bad, headers=t1["headers"]).status_code == 422
+    assert client.patch(url, json={"name": "x"}, headers=t2["headers"]).status_code == 403
+    assert client.patch(url, json={"name": "x"}, headers=s1["headers"]).status_code == 403
+    assert client.patch("/courses/9999", json={"name": "x"}, headers=t1["headers"]).status_code == 404

@@ -122,6 +122,19 @@ export interface LessonSummary {
   pageCount?: number;
 }
 
+/** 과목 수정 (보낸 것만 바뀜) */
+export interface CourseInput {
+  name?: string;
+  subject?: string; // 설명
+}
+
+/** 회차 정보 수정 (보낸 것만 바뀜). classDate가 null이면 날짜 지움. 수업 자료(PDF)는 그대로 */
+export interface LessonInfoInput {
+  sessionNo?: number;
+  title?: string;
+  classDate?: string | null; // YYYY-MM-DD
+}
+
 export interface NewLessonInput {
   file: File;
   sessionNo: number;

@@ -6,7 +6,8 @@ from app.db import get_session
 from app.deps import get_current_user, require_student, require_teacher
 from app.models import Course, Enrollment, Lesson, Role, User
 from app.permissions import STUDENT_VISIBLE_STATUSES, get_accessible_course, get_owned_course
-from app.schemas import CourseCreate, CourseDetail, CourseOut, CourseStudent, JoinRequest, JoinResponse, LessonBrief
+from app.schemas import (CourseCreate, CourseDetail, CourseOut, CourseStudent, CourseUpdate, JoinRequest, JoinResponse,
+                         LessonBrief)
 from app.security import generate_invite_code
 
 router = APIRouter(prefix="/courses", tags=["courses"])
@@ -51,6 +52,23 @@ def create_course(
         session.refresh(course)
         return _course_out(session, course, teacher)
     raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "초대 코드를 만들지 못했습니다. 다시 시도해 주세요")
+
+
+@router.patch("/{course_id}", response_model=CourseOut, summary="과목 이름·설명 수정 (교사)",
+              description="보낸 필드만 바꾼다. 초대 코드는 그대로.")
+def update_course(
+    course_id: int, body: CourseUpdate,
+    session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+) -> CourseOut:
+    course = get_owned_course(session, course_id, teacher)
+    if body.name is not None:
+        course.name = body.name
+    if body.description is not None:
+        course.description = body.description
+    session.add(course)
+    session.commit()
+    session.refresh(course)
+    return _course_out(session, course, teacher)
 
 
 @router.get("", response_model=list[CourseOut], summary="내 과목 목록 (교사: 만든 과목 / 학생: 등록한 과목)")

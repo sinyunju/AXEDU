@@ -75,12 +75,14 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 - `GET /courses` → 교사: 내가 만든 과목 / 학생: 내가 등록한 과목
 - `GET /courses/{course_id}` → 과목 정보 + 회차 목록 (학생에게는 승인된 회차만)
 - `GET /courses/{course_id}/students` → 등록 학생 목록 (교사 전용)
+- `PATCH /courses/{course_id}` (body: {name?, description?}) → 과목 수정 (초대 코드는 그대로)
 
 ### 과목 등록 (학생)
 - `POST /courses/join` (body: {invite_code}) → Enrollment 생성
 
 ### 수업 회차와 자료 (교사)
 - `POST /courses/{course_id}/lessons` (multipart: file=PDF, session_no, title, class_date?) → 페이지 분리, 텍스트 추출, PNG 렌더링 → Lesson 반환
+- `PATCH /lessons/{lesson_id}` (body: {session_no?, title?, class_date?}) → 회차 정보 수정 (class_date null이면 지움, 회차 번호 중복 409, 자료·페이지는 그대로)
 - `POST /lessons/{lesson_id}/generate` → 백그라운드 작업으로 페이지별 재구성 시작. 즉시 202 반환
 - `GET /lessons/{lesson_id}` → Lesson + Pages + progress (교사: 전체, 학생: 승인된 내용만)
 - `PUT /lessons/{lesson_id}/pages/{page_no}` → 교사가 easy_sentences / hard_words 수정
