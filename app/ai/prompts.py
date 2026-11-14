@@ -236,3 +236,29 @@ def chat_messages(pages: list[dict], transcripts: list[dict], history: list[dict
         .replace("{message}", message.strip())
     )
     return [{"role": "system", "content": CHAT_RULES}, {"role": "user", "content": content}]
+
+
+TERM_TASK = """\
+선생님이 수업 자료에서 학생이 어려워할 낱말을 골랐어. 이 낱말의 뜻을 학생에게 쉽게 풀어 줘.
+
+출력 JSON 형식:
+{"meaning": "쉬운 뜻 한 문장"}
+
+작성 방법:
+- 아래 페이지 글에서 이 낱말이 쓰인 뜻으로 풀이한다. 여러 뜻이 있는 낱말이면 이 페이지에 맞는 뜻 하나만 쓴다.
+- 한 문장, 40자 안팎. "~해요"체로 끝낸다. 예) "광합성: 식물이 빛으로 양분을 만드는 일이에요." 에서 뜻 부분처럼.
+- 낱말 자체를 그대로 되풀이하지 말고, 학생이 아는 쉬운 말로 바꿔 설명한다.
+- 뜻 풀이만 쓴다. 역사, 숫자, 다른 예시 같은 페이지에 없는 사실은 덧붙이지 않는다.
+- 낱말 앞에 "~란", "~는" 같은 머리말 없이 뜻 문장만 쓴다. 예) "식물이 빛으로 양분을 만드는 일이에요."
+
+낱말: {word}
+
+페이지 글(이 낱말이 쓰인 문맥):
+\"\"\"
+{source_text}
+\"\"\""""
+
+
+def term_messages(source_text: str, word: str) -> list[dict[str, str]]:
+    content = TERM_TASK.replace("{word}", word.strip()).replace("{source_text}", source_text.strip() or "(글 없음)")
+    return [{"role": "system", "content": COMMON_RULES}, {"role": "user", "content": content}]

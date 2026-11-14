@@ -234,3 +234,20 @@ def test_chat_request_and_zero_page():
     # 두 가지 거절 문구가 모두 지시에 들어가고, 챗봇용 공통 규칙(기초 지식 허용)을 씀
     assert "이건 오늘 수업과 다른 이야기예요." in prompt and "오늘 수업에서는 거기까지 나오지 않았어요." in prompt
     assert "교과서에 나오는 확실한 기본 지식" in body["messages"][0]["content"]
+
+
+def test_explain_term_request():
+    bodies = []
+
+    def handler(req):
+        bodies.append(json.loads(req.content))
+        return httpx.Response(200, json=completion('{"meaning": " 잎 속 초록 알갱이예요. "}'))
+
+    out = asyncio.run(text_provider(handler).explain_term("엽록체에서 광합성이 일어난다.", "엽록체"))
+    assert out == {"meaning": "잎 속 초록 알갱이예요."}
+    body = bodies[0]
+    assert body["model"] == "main"
+    assert body["response_format"]["json_schema"]["name"] == "term_meaning"
+    prompt = body["messages"][-1]["content"]
+    assert "낱말: 엽록체" in prompt and "엽록체에서 광합성이 일어난다." in prompt
+    assert "~해요" in body["messages"][0]["content"] or "해요" in body["messages"][0]["content"]

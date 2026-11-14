@@ -284,3 +284,20 @@ class AnnotationOut(BaseModel):
 
 class AnnotationList(BaseModel):
     pages: list[AnnotationOut] = Field(description="필기가 있는 페이지만")
+
+
+# ---------- 낱말 뜻 AI ----------
+class TermExplainRequest(BaseModel):
+    word: str = Field(min_length=1, max_length=40, examples=["엽록체"])
+
+    @field_validator("word")
+    @classmethod
+    def _not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("낱말을 입력해 주세요")
+        return v.strip()
+
+
+class TermExplainOut(BaseModel):
+    word: str
+    meaning: str = Field(examples=["잎 속에서 빛으로 양분을 만드는 작은 알갱이예요."])

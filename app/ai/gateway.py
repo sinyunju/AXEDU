@@ -15,10 +15,10 @@ from pydantic import BaseModel, ValidationError
 
 from app.ai.base import AIError, AIProvider, ImageProvider, image_extension
 from app.ai.prompts import (
-    IMAGE_STYLE_SUFFIX, chat_messages, live_caption_messages, quiz_messages, restructure_messages,
+    IMAGE_STYLE_SUFFIX, chat_messages, live_caption_messages, quiz_messages, restructure_messages, term_messages,
 )
 from app.ai.schemas import (
-    CHAT_SCHEMA, LIVE_CAPTION_SCHEMA, QUIZ_SCHEMA, RESTRUCTURE_SCHEMA, ChatOut, LiveCaptionOut, QuizOutRaw,
+    CHAT_SCHEMA, LIVE_CAPTION_SCHEMA, QUIZ_SCHEMA, RESTRUCTURE_SCHEMA, TERM_SCHEMA, ChatOut, LiveCaptionOut, QuizOutRaw, TermOut,
     RestructureOut,
 )
 
@@ -100,6 +100,10 @@ class GatewayTextProvider(AIProvider):
         return await self._json_call(self.model_live,
                                      live_caption_messages(source_text, transcript, previous_easy, context),
                                      LIVE_CAPTION_SCHEMA, LiveCaptionOut)
+
+    async def explain_term(self, source_text: str, word: str) -> dict[str, Any]:
+        out = await self._json_call(self.model_main, term_messages(source_text, word), TERM_SCHEMA, TermOut)
+        return {"meaning": out["meaning"].strip()}
 
     async def generate_quiz(self, pages, transcripts) -> dict[str, Any]:
         return await self._json_call(self.model_main, quiz_messages(pages, transcripts), QUIZ_SCHEMA, QuizOutRaw)

@@ -129,6 +129,7 @@ cp .env.example .env              # 필요한 값 수정 (아래 환경변수 �
 | POST | `/lessons/{id}/generate` | 교사 | 재구성 시작 (202, 진행률은 `GET /lessons/{id}`의 `progress`) |
 | GET | `/lessons/{id}` | 둘 다 | 회차 + 페이지. 학생에게는 `source_text`(원문)와 `image_suggestion`(AI 이미지 제안)이 `null`, 원본 페이지 이미지 `image_url`은 그대로 내려감. 승인 안 된 페이지의 쉬운 문장·낱말·생성 이미지는 비어 있음 |
 | PUT | `/lessons/{id}/pages/{n}` | 교사 | `easy_sentences`, `hard_words` 수정 |
+| POST | `/lessons/{id}/pages/{n}/terms/explain` | 교사 | `{word}` → `{word, meaning}` 그 페이지 글을 문맥으로 낱말의 쉬운 뜻을 AI로 만듦 (저장 안 함, 확인 후 `PUT .../pages/{n}`의 `hard_words`로 저장). AI 실패 시 502 |
 | POST / DELETE | `/lessons/{id}/pages/{n}/image` | 교사 | 이미지 생성(`{prompt?}`, 비우면 AI 제안 사용) / 삭제 |
 | POST | `/lessons/{id}/approve` | 교사 | 승인 → 학생 공개 |
 | POST | `/lessons/{id}/start`, `/end` | 교사 | 수업 시작·종료 (WebSocket으로 알림) |

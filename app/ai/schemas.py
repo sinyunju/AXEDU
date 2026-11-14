@@ -167,3 +167,18 @@ CHAT_SCHEMA = strict_json_schema(
         "additionalProperties": False,
     },
 )
+
+
+class TermOut(_Strict):
+    meaning: str = Field(min_length=1)
+
+
+TERM_SCHEMA = strict_json_schema(
+    "term_meaning",
+    {
+        "type": "object",
+        "properties": {"meaning": {"type": "string"}},
+        "required": ["meaning"],
+        "additionalProperties": False,
+    },
+)

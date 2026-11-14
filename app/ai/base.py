@@ -39,6 +39,10 @@ class AIProvider(ABC):
         """
 
     @abstractmethod
+    async def explain_term(self, source_text: str, word: str) -> dict[str, Any]:
+        """페이지 글을 문맥으로 낱말의 쉬운 뜻. → {meaning}"""
+
+    @abstractmethod
     async def generate_quiz(self, pages: list[dict[str, Any]], transcripts: list[dict[str, Any]]) -> dict[str, Any]:
         """→ {questions: [{id, type: "ox"|"choice", question, choices?, answer, explanation, page_no}]}"""
 

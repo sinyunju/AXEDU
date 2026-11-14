@@ -617,6 +617,73 @@
         }
       }
     },
+    "/lessons/{lesson_id}/pages/{page_no}/terms/explain": {
+      "post": {
+        "tags": [
+          "lessons"
+        ],
+        "summary": "낱말 뜻 AI로 채우기 (교사)",
+        "description": "그 페이지 글을 문맥으로 낱말의 쉬운 뜻을 만들어 돌려준다. 저장하지 않으므로, 교사가 확인한 뒤 `PUT /lessons/{id}/pages/{n}`의 hard_words로 저장한다.",
+        "operationId": "explain_term_lessons__lesson_id__pages__page_no__terms_explain_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "lesson_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Lesson Id"
+            }
+          },
+          {
+            "name": "page_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Page No"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TermExplainRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermExplainOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/lessons/{lesson_id}/pages/{page_no}/image": {
       "post": {
         "tags": [
@@ -2711,6 +2778,45 @@
         ],
         "title": "Stroke",
         "description": "필기 한 획. 좌표·굵기는 페이지 크기 기준 0~1 비율이라 화면 크기가 달라도 같은 자리에 그려진다."
+      },
+      "TermExplainOut": {
+        "properties": {
+          "word": {
+            "type": "string",
+            "title": "Word"
+          },
+          "meaning": {
+            "type": "string",
+            "title": "Meaning",
+            "examples": [
+              "잎 속에서 빛으로 양분을 만드는 작은 알갱이예요."
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "word",
+          "meaning"
+        ],
+        "title": "TermExplainOut"
+      },
+      "TermExplainRequest": {
+        "properties": {
+          "word": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Word",
+            "examples": [
+              "엽록체"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "word"
+        ],
+        "title": "TermExplainRequest"
       },
       "UserBrief": {
         "properties": {

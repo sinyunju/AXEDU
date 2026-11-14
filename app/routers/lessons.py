@@ -14,7 +14,8 @@ from app.deps import get_current_user, require_teacher
 from app.models import Lesson, LessonStatus, Page, PageLive, Role, User
 from app.pdf import PdfError, remove_files, render_pdf
 from app.permissions import get_accessible_lesson, get_owned_course, get_owned_lesson
-from app.schemas import ImageRequest, LessonDetail, LessonOut, PageOut, PageUpdate, PageView
+from app.schemas import (ImageRequest, LessonDetail, LessonOut, PageOut, PageUpdate, PageView, TermExplainOut,
+                         TermExplainRequest)
 from app.services.generation import run_generation
 from app.services.live import normalize_captions
 from app.storage import GENERATED_SUBDIR, delete_file, save_file
@@ -194,6 +195,26 @@ def update_page(
     session.commit()
     session.refresh(page)
     return page_out(page, teacher)
+
+
+@router.post(
+    "/lessons/{lesson_id}/pages/{page_no}/terms/explain", response_model=TermExplainOut,
+    summary="낱말 뜻 AI로 채우기 (교사)",
+    description="그 페이지 글을 문맥으로 낱말의 쉬운 뜻을 만들어 돌려준다. 저장하지 않으므로, 교사가 확인한 뒤 "
+                "`PUT /lessons/{id}/pages/{n}`의 hard_words로 저장한다.",
+)
+async def explain_term(
+    lesson_id: int, page_no: int, body: TermExplainRequest,
+    session: Session = Depends(get_session), teacher: User = Depends(require_teacher),
+    provider: AIProvider = Depends(get_ai_provider),
+) -> TermExplainOut:
+    lesson = get_owned_lesson(session, lesson_id, teacher)
+    page = _get_page(session, lesson, page_no)
+    try:
+        result = await provider.explain_term(page.source_text, body.word)
+    except AIError:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "지금은 뜻을 만들 수 없어요. 잠시 후 다시 시도해 주세요")
+    return TermExplainOut(word=body.word, meaning=result["meaning"])
 
 
 @router.post(

@@ -82,6 +82,7 @@ v1의 Session(수업 코드), Student(닉네임) 모델은 사용하지 않는�
 - `PUT /lessons/{lesson_id}/pages/{page_no}` → 교사가 easy_sentences / hard_words 수정
 - `POST /lessons/{lesson_id}/pages/{page_no}/image` (body: {prompt?}) → 이미지 생성 (교사가 직접 지정하거나 AI 제안 prompt 사용)
 - `DELETE /lessons/{lesson_id}/pages/{page_no}/image` → 이미지/제안 삭제
+- `POST /lessons/{lesson_id}/pages/{page_no}/terms/explain` (body: {word}) → {word, meaning}. 그 페이지 source_text를 문맥으로 낱말의 쉬운 뜻 생성 (저장하지 않음, MODEL_MAIN)
 - `POST /lessons/{lesson_id}/approve` → 회차 승인 (학생에게 공개)
 - `POST /lessons/{lesson_id}/start` → 실시간 수업 시작 (status=`live`)
 - `POST /lessons/{lesson_id}/end` → 수업 종료 (status=`ended`)

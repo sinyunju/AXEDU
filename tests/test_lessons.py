@@ -143,3 +143,44 @@ def test_student_view_hides_unapproved_content(client, session, ctx):
     assert pages[2]["easy_sentences"] == [] and pages[2]["hard_words"] == []  # 미승인 페이지
     assert all(p["source_text"] is None and p["image_suggestion"] is None for p in pages)
     assert all(p["image_url"].startswith("/files/") for p in pages)  # 원본 이미지는 항상 제공
+
+
+# ---------- 낱말 뜻 AI ----------
+def test_explain_term(client, ctx):
+    from app.ai import AIError, get_ai_provider
+    from app.ai.mock import MockProvider
+
+    lesson_id = upload(client, ctx["t1"], ctx["course"]["id"]).json()["id"]
+    url = f"/lessons/{lesson_id}/pages/1/terms/explain"
+    seen = {}
+
+    class Recording(MockProvider):
+        async def explain_term(self, source_text, word):
+            seen.update(source_text=source_text, word=word)
+            return {"meaning": "잎 속에서 빛으로 양분을 만드는 알갱이예요."}
+
+    client.app.dependency_overrides[get_ai_provider] = lambda: Recording()
+    try:
+        r = client.post(url, json={"word": "  엽록체 "}, headers=ctx["t1"]["headers"])
+        assert r.status_code == 200
+        assert r.json() == {"word": "엽록체", "meaning": "잎 속에서 빛으로 양분을 만드는 알갱이예요."}
+        assert seen["word"] == "엽록체" and seen["source_text"]  # 그 페이지 글을 문맥으로 넘김
+
+        class Broken(MockProvider):
+            async def explain_term(self, source_text, word):
+                raise AIError("down")
+
+        client.app.dependency_overrides[get_ai_provider] = lambda: Broken()
+        assert client.post(url, json={"word": "엽록체"}, headers=ctx["t1"]["headers"]).status_code == 502
+    finally:
+        client.app.dependency_overrides.pop(get_ai_provider, None)
+
+    # MOCK_AI 고정 응답
+    assert client.post(url, json={"word": "엽록체"}, headers=ctx["t1"]["headers"]).json()["meaning"]
+    # 권한·입력 검증
+    assert client.post(url, json={"word": "엽록체"}, headers=ctx["t2"]["headers"]).status_code == 403
+    assert client.post(url, json={"word": "엽록체"}, headers=ctx["s1"]["headers"]).status_code == 403
+    assert client.post(f"/lessons/{lesson_id}/pages/99/terms/explain", json={"word": "a"},
+                       headers=ctx["t1"]["headers"]).status_code == 404
+    for bad in ({"word": "   "}, {"word": ""}, {"word": "가" * 41}, {}):
+        assert client.post(url, json=bad, headers=ctx["t1"]["headers"]).status_code == 422
